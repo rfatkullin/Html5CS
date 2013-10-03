@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+	
+	<head>
+    	<meta charset=utf-8>
+		<title>HTML5 game</title>
+	</head>
+
+	<body onLoad='StartGame()'>
+
+        <script id='shader_vertex' type='x-shader/x-vertex' src='../scripts/vertex_shader.js'>
+            attribute vec3 aVertexPosition;
+
+            void main(void)
+            {
+                gl_Position = vec4( aVertexPosition, 1.0 );
+            }
+        </script>
+
+        <script id='shader_fragment' type='x-shader/x-fragment' src='../scripts/fragment_shader.js'>
+            void main(void)
+            {
+                gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 );
+            }
+        </script>
+
+		<canvas id='game-canvas' width='800' height='600'>
+			Your browser does not support HTML5 Canvas.
+		</canvas>
+	</body> 
+
+	<script src='../scripts/game.js'></script>
+
+</html>
