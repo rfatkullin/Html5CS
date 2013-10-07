@@ -4,31 +4,42 @@
 	<head>
     	<meta charset=utf-8>
 		<title>HTML5 game</title>
+
+        <script src='../scripts/graphics.js'></script>
+        <script src='../scripts/geometry.js'></script>
+        <script src='../scripts/character.js'></script>
+        <script src='../scripts/game.js'></script>
 	</head>
 
-	<body onLoad='StartGame()'>
+	<body onLoad='StartGame()' onkeydown='OnKeyDown()'>
+    <!--<body onLoad='DebugMode()'>-->
 
         <script id='shader_vertex' type='x-shader/x-vertex' src='../scripts/vertex_shader.js'>
-            attribute vec3 aVertexPosition;
+            attribute vec2 a_pos;
+
+            uniform vec2 u_resolution;
 
             void main(void)
             {
-                gl_Position = vec4( aVertexPosition, 1.0 );
+                vec2 zeroToOne    = a_pos / u_resolution;
+                vec2 zeroToTwo    = zeroToOne * 2.0;
+                vec2 clipSpacePos = zeroToTwo - 1.0;
+
+                gl_Position = vec4( clipSpacePos, 0.0, 1.0 );
             }
         </script>
 
         <script id='shader_fragment' type='x-shader/x-fragment' src='../scripts/fragment_shader.js'>
+
             void main(void)
             {
-                gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 );
+                gl_FragColor = vec4( 0.0, 1.0, 0.0, 1.0 );
             }
         </script>
 
 		<canvas id='game-canvas' width='800' height='600'>
 			Your browser does not support HTML5 Canvas.
 		</canvas>
-	</body> 
-
-	<script src='../scripts/game.js'></script>
+	</body>
 
 </html>
