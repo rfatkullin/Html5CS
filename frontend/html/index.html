@@ -11,10 +11,10 @@
         <script src='../scripts/game.js'></script>
 	</head>
 
-	<body onLoad='StartGame()' onkeydown='OnKeyDown()'>
+	<body onload='OnLoad()' onkeydown='OnKeyDown()'>
     <!--<body onLoad='DebugMode()'>-->
 
-        <script id='shader_vertex' type='x-shader/x-vertex' src='../scripts/vertex_shader.js'>
+        <script id='shader_vertex' type='x-shader/x-vertex'>
             attribute vec2 a_pos;
 
             uniform vec2 u_resolution;
@@ -29,7 +29,7 @@
             }
         </script>
 
-        <script id='shader_fragment' type='x-shader/x-fragment' src='../scripts/fragment_shader.js'>
+        <script id='shader_fragment' type='x-shader/x-fragment'>
 
             void main(void)
             {
@@ -37,6 +37,9 @@
             }
         </script>
 
+        <p>
+            <input type='button' id='start_button' value='Start game' onclick='StartGame()'>
+        </p>
 		<canvas id='game-canvas' width='800' height='600'>
 			Your browser does not support HTML5 Canvas.
 		</canvas>
