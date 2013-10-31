@@ -5,13 +5,24 @@
     	<meta charset=utf-8>
 		<title>HTML5 game</title>
 
+        <script src='../scripts/jquery.js'></script>           
         <script src='../scripts/graphics.js'></script>
         <script src='../scripts/geometry.js'></script>
+        <script src='../scripts/barrel.js'></script>
         <script src='../scripts/character.js'></script>
+        <script src='../scripts/world.js'></script>
+        <script src='../scripts/cursor.js'></script>
         <script src='../scripts/game.js'></script>
+
+        <style>
+            canvas
+            {
+                cursor : none;
+            }
+        </style>
 	</head>
 
-	<body onload='OnLoad()' onkeydown='OnKeyDown()'>
+	<body onload='OnLoad()' onkeydown='OnKeyDown()' onkeyup='OnKeyUp()'>
     <!--<body onLoad='DebugMode()'>-->
 
         <script id='shader_vertex' type='x-shader/x-vertex'>
@@ -30,19 +41,29 @@
         </script>
 
         <script id='shader_fragment' type='x-shader/x-fragment'>
+            precision mediump float;
+            uniform vec4 u_color;
 
             void main(void)
             {
-                gl_FragColor = vec4( 0.0, 1.0, 0.0, 1.0 );
+                gl_FragColor = u_color;
             }
         </script>
 
-        <p>
-            <input type='button' id='start_button' value='Start game' onclick='StartGame()'>
-        </p>
-		<canvas id='game-canvas' width='800' height='600'>
-			Your browser does not support HTML5 Canvas.
-		</canvas>
+            <p>
+                <input type='button' id='start_button' value='Start game' onclick='StartGame()'>
+            </p>
+    		
+            <canvas id='game-canvas' width='800' height='600'>
+    			Your browser does not support HTML5 Canvas.
+    		</canvas>
+            
+            <p align='left' id='mouse_pos'>(0.0;0.0)</p>
+            <p align='left' id='player_pos'>(0.0;0.0)</p>
+            <p align='left' id='line1'>(0.0;0.0)</p>
+            <p align='left' id='line2'>(0.0;0.0)</p>
+            <p align='left' id='line3'>(0.0;0.0)</p>
+            <p align='left' id='line4'>(0.0;0.0)</p>
 	</body>
 
 </html>

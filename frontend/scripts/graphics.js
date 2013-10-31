@@ -33,8 +33,9 @@ function InitShaders()
 
     gl.useProgram( g_graphics.m_shaderProgram );
 
-    g_graphics.m_shaderProgram.m_positionAttribute = gl.getAttribLocation( g_graphics.m_shaderProgram, "a_pos" );
-    g_graphics.m_shaderProgram.m_resolutionUniform = gl.getUniformLocation( g_graphics.m_shaderProgram, "u_resolution" );
+    g_graphics.m_shaderProgram.m_positionAttribute  = gl.getAttribLocation( g_graphics.m_shaderProgram, "a_pos" );
+    g_graphics.m_shaderProgram.m_resolutionUniform  = gl.getUniformLocation( g_graphics.m_shaderProgram, "u_resolution" );
+    g_graphics.m_shaderProgram.m_colorUniform       = gl.getUniformLocation( g_graphics.m_shaderProgram, "u_color");
 
     gl.uniform2f( g_graphics.m_shaderProgram.m_resolutionUniform , canvas.width, canvas.height );
 }

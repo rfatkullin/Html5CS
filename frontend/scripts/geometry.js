@@ -6,7 +6,7 @@ function Vector( a_posX, a_posY )
 
 function Circle( a_pos, a_radius )
 {
-    function GenerateCirclePoints()
+    var GenerateCirclePoints = function ()
     {
         const VERTS_CNT     = 50;
         var angle           = 0.0;
@@ -25,9 +25,15 @@ function Circle( a_pos, a_radius )
         this.m_size  = VERTS_CNT + 1;
     }
 
+    var Init = function ()
+    {
+        GenerateCirclePoints.apply( this );
+        this.m_vertBuff = gl.createBuffer();
+    }
+
     this.ShiftOn = function ( a_pos )
     {
-        for ( i = 0; i < this.m_size; i += 2 )
+        for ( i = 0; i < 2 * this.m_size; i += 2 )
         {
             this.m_verts[ i ]     += a_pos.m_x;
             this.m_verts[ i + 1 ] += a_pos.m_y;
@@ -61,8 +67,9 @@ function Circle( a_pos, a_radius )
         }
     }
 
-    this.Draw = function()
+    this.Draw = function( a_color )
     {
+        gl.uniform4fv( g_graphics.m_shaderProgram.m_colorUniform, a_color );
         gl.bindBuffer( gl.ARRAY_BUFFER, this.m_vertBuff );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( this.m_verts ), gl.STATIC_DRAW );
         gl.enableVertexAttribArray( g_graphics.m_shaderProgram.m_positionAttribute );
@@ -70,14 +77,12 @@ function Circle( a_pos, a_radius )
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
 
-    //Initialize
-    GenerateCirclePoints.apply( this );
-    this.m_vertBuff = gl.createBuffer();
+    Init.apply( this );    
 }
 
 function Rectangle( a_pos, a_width, a_height )
 {
-    function GenerateRectanglePoints()
+    var GenerateRectanglePoints = function()
     {
         this.m_verts = [ a_pos.m_x - a_width / 2.0, a_pos.m_y + a_height / 2.0,
                          a_pos.m_x + a_width / 2.0, a_pos.m_y + a_height / 2.0,
@@ -85,7 +90,13 @@ function Rectangle( a_pos, a_width, a_height )
                          a_pos.m_x - a_width / 2.0, a_pos.m_y - a_height / 2.0 ];
 
         this.m_size = 4;
-        this.m_pos  = new Vector( a_pos.m_x, a_pos.m_y );
+        this.m_pos  = $.extend( false, {}, a_pos );
+    }
+
+    var Init = function ()
+    {        
+        GenerateRectanglePoints.apply( this );
+        this.m_vertBuff = gl.createBuffer();
     }
 
     this.ShiftOn = function ( a_pos )
@@ -116,10 +127,61 @@ function Rectangle( a_pos, a_width, a_height )
         gl.vertexAttribPointer( g_graphics.m_shaderProgram.m_positionAttribute, 2, gl.FLOAT, false, 0, 0 );
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
+   
+    Init.apply( this );
+}
 
-    //Initialize
-    GenerateRectanglePoints.apply( this );
-    this.m_vertBuff = gl.createBuffer();
+
+function Line( a_begin, a_end, a_length )
+{
+    var Init = function()
+    {
+        this.m_length = a_length;
+
+        this.m_verts = [ a_begin.m_x, a_begin.m_y,
+                         a_end.m_x,   a_end.m_y ];
+
+        this.m_size = 2;
+        this.m_vertBuff = gl.createBuffer();        
+    }
+    
+    this.ShiftOn = function ( a_pos )
+    {
+        for ( var i = 0; i < 2 * this.m_size; i += 2 )
+        {
+            this.m_verts[ i ]     += a_pos.m_x;
+            this.m_verts[ i + 1 ] += a_pos.m_y;
+        }
+    }
+
+    this.SetPos = function ( a_pos )
+    {
+        this.m_verts[ 2 ] += a_pos.m_x - this.m_verts[ 0 ];
+        this.m_verts[ 3 ] += a_pos.m_y - this.m_verts[ 1 ];
+
+        this.m_verts[ 0 ] = a_pos.m_x;
+        this.m_verts[ 1 ] = a_pos.m_y        
+    }
+    
+    this.Draw = function ( a_color )
+    {
+        gl.lineWidth( 1.0 );
+        gl.getParameter( gl.ALIASED_LINE_WIDTH_RANGE );
+        gl.uniform4fv( g_graphics.m_shaderProgram.m_colorUniform, a_color );
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.m_vertBuff );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( this.m_verts ), gl.STATIC_DRAW );
+        gl.enableVertexAttribArray( g_graphics.m_shaderProgram.m_positionAttribute );
+        gl.vertexAttribPointer( g_graphics.m_shaderProgram.m_positionAttribute, 2, gl.FLOAT, false, 0, 0 );
+        gl.drawArrays( gl.LINES, 0, this.m_size );
+    }
+
+    this.ChangeDir = function ( a_dir )
+    {
+       this.m_verts[ 2 ] = this.m_verts[ 0 ] + a_dir.m_x * this.m_length;
+       this.m_verts[ 3 ] = this.m_verts[ 1 ] + a_dir.m_y * this.m_length;
+    }
+   
+    Init.apply( this );
 }
 
 function Triangle( a_pos )

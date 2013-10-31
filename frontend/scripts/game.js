@@ -1,82 +1,97 @@
-function OnMessage( a_message )
+function OnMessage( a_msg )
 { 
-    InfLog( '[RECV]: ' + a_message.data );
-    var json = JSON.parse( a_message.data );
+    InfLog( '[RECV]: ' + a_msg.data );
+    a_msg = a_msg.parse( a_msg.data );
+    var ans = {};
 
-    if ( json.type === 'login' ) 
-    { 
-        InfLog( 'Get login: ' + json.data );
-        g_gameState.login = json.data;
+    switch ( a_msg.type )
+    {
+        case 'login' :
+            InfLog( '[RECV]: Get login: ' + a_msg.login );
+            g_word.m_player.m_id = a_msg.login;
+            ans = { type : 'login_ack' };
+            break;
+
+        case 'update' :
+            InfLog( '[RECV]: Get update: ' + a_msg.tick );
+            g_world.Update( a_msg, (new Date()).getTime() );
+            ans = { type : 'ack_update', tick : a_msg.tick };
+            break;
+
+        default :
+            ErrLog( '[RECV]: Non-existent command: ' + a_msg.tick );
     }
-    else
-        alert( 'Other data.' );
-}
 
-function InitWorld()
-{
-    g_gameState = { start : false, login : undefined };
-
-    g_userCharacter = new Character( new Vector( 100.0, 100.0 ), new Vector( 0.0, 0.0 ) );
-}
-
-function DrawWorld()
-{
-    g_userCharacter.Draw();
-}
-
-function DrawScene()
-{
-    gl.viewport( 0, 0, gl.viewportWidth, gl.viewportHeight );
-    gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
-    gl.clear( gl.COLOR_BUFFER_BIT );
-
-    DrawWorld();
-}
-
-function SendKeyDown( a_key )
-{
-    g_webSocket.send( JSON.stringify( { type : 'control', login: g_gameState.login, key : a_key } ) );
-    InfLog( 'Send control key' );
+    g_webSocket.send( a_msg.stringify( ans ) );        
 }
 
 function OnKeyDown( a_event )
-{    
-    if ( !g_gameState || !g_gameState.start )
+{   
+    if ( !g_server.m_start )
         return;
 
     events = a_event || window.event;
 
+    g_server.m_downKeys[ event.keyCode ] = true;
+}
+
+function OnKeyUp( a_event )
+{
+     if ( !g_server.m_start )
+        return;
+
+    events = a_event || window.event;    
+
+    g_server.m_downKeys[ event.keyCode ] = false;    
+}
+
+function OnMouseMove( a_event )
+{
+    if ( !g_server.m_start )
+        return;
+
+    var mouseX = a_event.pageX - canvas.offsetLeft;
+    var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );    
+
+    g_server.m_mouseMove        = true;
+    g_server.m_mouseLastPos.m_x = mouseX;
+    g_server.m_mouseLastPos.m_y = mouseY;    
+}
+
+function ProcessUserControl ()
+{
     var shiftValue = { m_x : 0.0, m_y : 0.0 };
 
-    switch ( event.keyCode )
-    {
+    //d
+    if ( g_server.m_downKeys[ 68 ] )
+        ++shiftValue.m_x;     
 
-        case 68 : //d
-            SendKeyDown( 68 );
-            shiftValue.m_x = 1.0;
-            break;
-        case 65 : //a
-            SendKeyDown( 65 );
-            shiftValue.m_x = -1.0;
-            break;
-        case 87 : //w
-            SendKeyDown( 87 );
-            shiftValue.m_y = 1.0;
-            break;
-        case 83 : //s
-            SendKeyDown( 83 );
-            shiftValue.m_y = -1.0;
-            break;
-        default :
-            break;
-    }
+    //a
+    if ( g_server.m_downKeys[ 65 ] )
+        --shiftValue.m_x;     
 
-    g_userCharacter.ShiftOn( shiftValue );
+    //w
+    if ( g_server.m_downKeys[ 87 ] )
+        ++shiftValue.m_y;     
+
+    //s
+    if ( g_server.m_downKeys[ 83 ] )
+        --shiftValue.m_y;     
+
+    g_world.ProcessUserInput( shiftValue, g_server.m_mouseLastPos ); 
+
+    g_server.m_controlVec.m_x += shiftValue.m_x;
+    g_server.m_controlVec.m_y += shiftValue.m_y;
+
+    g_cursor.SetPos( g_server.m_mouseLastPos );
+    document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_server.m_mouseLastPos.m_x + ", " + g_server.m_mouseLastPos.m_y + ")";
 }
 
 function OnLoad()
 {
 	canvas = document.getElementById( 'game-canvas' );
+
+    canvas.onmousemove = OnMouseMove;
 
 	if ( !canvas )
 		alert( '[Error]: Can\'t find canvas element on page!' );
@@ -100,16 +115,23 @@ function OnLoad()
 
 		InitShaders();        
 	}
+    
+    g_server = new GameServer();
+    g_cursor = new Cursor( g_server.m_mouseLastPos );    
+    g_world  = new World();
+    setInterval( NextState, 10 );
 }
 
 function OnOpen()
 {
     console.log( '[INF]: Socket is open.' );
-    g_webSocket.send( JSON.stringify( { type : 'login', login : 'undefined' } ) );    
+    g_webSocket.send( a_msg.stringify( { type : 'get_login', login : 'undefined' } ) );    
 }
 
 function StartGame()
 {
+    g_server.m_start = true;
+
     g_webSocket = new WebSocket( 'ws://localhost:1024' );
 
     if ( g_webSocket === undefined )
@@ -119,28 +141,24 @@ function StartGame()
     g_webSocket.onclose     = function( a_event )   { /*Empty*/ };
     g_webSocket.onmessage   = OnMessage;
     g_webSocket.onerror     = function ( a_error )  { alert( 'Error message: ' + a_error.message ); };
-    
-    InitWorld();    
 
-    g_gameState.start = true;
-
-    setInterval( NextState, 10 );
+    setInterval( NextState, 20 );
 }
 
 function NextState()
 {
-    if ( !g_gameState.login )
+    if ( !g_server.m_start )
         return;
 
-    DrawWorld();
+    ProcessUserControl();
+    g_world.Draw();
+    g_cursor.Draw();
 }
 
-function InfLog( a_msg )
+function GameServer ()
 {
-    console.log( new Date() + '[INF]: ' + a_msg );
-}
-
-function ErrLog( a_msg )
-{
-    console.log( new Date() + '[ERR]: ' + a_msg );  
+    this.m_controlVec   = { m_x : 0.0, m_y : 0.0 };    
+    this.m_start        = false;
+    this.m_downKeys     = {};
+    this.m_mouseLastPos = { m_x : 0, m_y : canvas.height};
 }

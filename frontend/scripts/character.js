@@ -1,16 +1,22 @@
-function Character( a_pos, a_vel )
+function Character( a_pos )
 {
-    const RADIUS   = 10.0;
-    const VELOCITY = 5.0;
+    const RADIUS        = 20.0;
+    const VELOCITY      = 5.0;
+    const BARREL_LENGTH = 30.0;
 
-    this.m_pos    = new Vector( a_pos.m_x, a_pos.m_y );
-    this.m_vel    = new Vector( a_vel.m_x, a_vel.m_y );
-    //this.m_figure = new Circle( a_pos, RADIUS );
-    this.m_figure = new Rectangle( a_pos, 100.0, 100.0 );
+    var Init = function ()
+    {
+        this.m_pos    = $.extend( false, {}, a_pos );
+        this.m_figure = new Circle( a_pos, RADIUS );
+        this.m_barrel = new Barrel( a_pos, BARREL_LENGTH );
+        this.m_figColor  = [ 0.0, 1.0, 0.0, 0.3 ];
+        this.m_barrColor = [ 0.0, 0.0, 0.0, 1.0 ];
 
+    }
+    
     this.SetPos = function( a_pos )
     {
-        this.m_pos = new Vector( a_pos.m_x, a_pos.m_y );
+        this.m_pos = $.extend( false, {}, a_pos );
         this.m_figure.SetPos( a_pos );
     }
 
@@ -21,28 +27,67 @@ function Character( a_pos, a_vel )
 
     this.Draw = function()
     {
-        this.m_figure.Draw();
+        this.m_figure.Draw( this.m_figColor );
+        this.m_barrel.Draw( this.m_barrColor );
     }
 
     this.ShiftOn = function( a_pos )
     {
-        this.m_figure.ShiftOn( { m_x : VELOCITY * a_pos.m_x, m_y : VELOCITY * a_pos.m_y } );
+        var shiftVec = { m_x : VELOCITY * a_pos.m_x, 
+                         m_y : VELOCITY * a_pos.m_y };
+
+        this.m_pos.m_x += shiftVec.m_x;
+        this.m_pos.m_y += shiftVec.m_y;
+
+        this.m_figure.ShiftOn( shiftVec );
+        this.m_barrel.ShiftOn( shiftVec );
+
+        var posDomElement = document.getElementById( "player_pos" ).innerHTML = "Player pos: (" + this.m_pos.m_x + ", " + this.m_pos.m_y + ")";
     }
+
+    this.ChangeBarrelDirTo = function ( a_point )
+    {
+        var dir = { m_x : a_point.m_x - this.m_pos.m_x,
+                    m_y : a_point.m_y - this.m_pos.m_y };
+
+        var length = Math.sqrt( dir.m_x * dir.m_x + dir.m_y * dir.m_y );
+
+        if ( length < RADIUS )
+            return;
+
+        dir.m_x /= length;
+        dir.m_y /= length;
+
+        this.m_barrel.ChangeDir( dir );
+    }
+
+    Init.apply( this );
 }
 
-//function DebugMode()
-//{
-//    var character = new Character( { m_x : 100.0, m_y : 100.0 }, { m_x : 0.0, m_y : 0.0 } );
-//    alert( "Character position: (" + character.GetPos().m_x + ", " + character.GetPos().m_y  + ")" );
-//
-//    character.SetPos( { m_x : 200.0, m_y : 200.0 } );
-//    alert( "Character position: (" + character.GetPos().m_x + ", " + character.GetPos().m_y  + ")" );
-//
-//
-//    var pos = character.GetPos();
-//    pos.m_x =  2;
-//    pos.m_y = -2;
-//
-//    alert( "Character position: (" + character.GetPos().m_x + ", " + character.GetPos().m_y  + ")" );
-//
-//}
+function Barrel( a_pos, a_length  )
+{
+    var Init = function ()
+    {   
+        this.m_line = new Line( { m_x : a_pos.m_x,              m_y : a_pos.m_y },
+                                { m_x : a_pos.m_x + a_length,   m_y : a_pos.m_y },
+                                a_length );
+    }
+
+    this.ChangeDir = function ( a_dir )
+    {
+        this.m_line.ChangeDir( a_dir );
+    }
+
+    this.Draw = function ( a_color )
+    {
+        this.m_line.Draw( a_color );
+    }
+
+    this.ShiftOn = function ( a_shiftVec )
+    {
+        this.m_line.ShiftOn( a_shiftVec );
+    }
+
+    Init.apply( this );
+}
+

@@ -1,5 +1,5 @@
-
-var GameCommands 	= require( '../shared/commands.js' );
+var GameCommands = require( '../shared/commands' );
+var GameModule = require( './server_game' );
 
 function InfLog( a_msg )
 {
@@ -10,27 +10,12 @@ function ErrLog( a_msg )
 {
 	console.log( new Date() + '[ERR]: ' + a_msg );	
 }
-
-function AuthorizatonProcess( a_conn, a_req )
-{
-	if ( a_req.ack == a_conn.m_ack + 1 )
-	{
-		InfLog( 'Client connected. Login:' + a_req.m_login );
-		++a_conn.m_ack;
-		a_conn.m_logined = true;
-		return;
-	}
-
-	a_conn.send( JSON.stringify( { type : 'login', ack : a_conn.m_ack, data : a_conn.m_userId } ) );
-	
-	InfLog( 'Client trying to connect. Sent login:' + a_conn.m_userId );	
-}
  
-function MessageProcess( a_msg )
+function MessageProcess( a_conn, a_msg )
 {
 	try 
 	{
-		var jsonMsg = JSON.parse( a_msg );
+		a_msg = JSON.parse( a_msg );
 	} 
 	catch ( a_exc ) 
 	{
@@ -38,20 +23,27 @@ function MessageProcess( a_msg )
 		return;
 	}
 
-	switch ( jsonMsg.type )
+	switch ( a_msg.type )
 	{
-		case 'get_login' :		
-			AuthorizatonProcess( this, jsonMsg );
-			break;
-		
-		case 'control' :
-			g_game.ProcessUserInput( a_conn.m_userId, jsonMsg );
-			InfLog( '[CL' + jsonMsg.login + ']:' + ' received control ' + jsonMsg.key.toString() );			
+		case 'login_get' :		
+			a_conn.send( JSON.stringify( { type : 'login', login : a_conn.m_userId } ) );
+			InfLog( 'Client trying to connect. Sent login:' + a_conn.m_userId );
 			break;
 
-		case 'update' :
-			this.m_ackSnapshot = jsonMsg.ackSnapshot;
-			InfLog( '[CL' + jsonMsg.login + ']:' + ' received update ack ' + jsonMsg.key.toString() );
+		case 'login_ack' :
+			a_conn.m_logined = true;
+			g_serverGame.AddNewPlayer( a_conn.m_userId );
+			InfLog( 'Client [' + a_conn.m_userId + ']  logined.' );
+			break;
+
+		case 'control' :
+			g_serverGame.ProcessUserInput( a_conn.m_userId, a_msg );
+			InfLog( '[CL' + a_msg.login + ']:' + ' received control ' + a_msg.key.toString() );			
+			break;
+
+		case 'update_ack' :
+			a_conn.m_lastAckSnapshot = a_msg.tick;			
+			InfLog( '[CL' + a_msg.login + ']:' + ' received update ack ' + a_msg.tick );
 			break;
 
 		default :
@@ -83,12 +75,12 @@ function InitServer()
 
 function InitConnection( a_conn, a_userId )
 {
-	a_conn.m_userId 		= g_game.GetUniqueId();
-	a_conn.m_ack 			= 0;
-	a_conn.m_ackSnapshot 	= 0;	
+	a_conn.m_userId 			= g_serverGame.GetUniqueId();
+	a_conn.m_ack 				= 0;
+	a_conn.m_lastAckSnapshot 	= 0;	
 }
 
-function SendSnapshot( a_snapshot )
+function SendSnapshots( a_snapshot )
 {
 	for ( var conn in g_server.m_connections )
 	{
@@ -96,26 +88,25 @@ function SendSnapshot( a_snapshot )
 			continue;
 
 		conn.send( JSON.stringify( { type     : 'update', 
-									 snapshot : g_game.GetSnapshotsDiff( conn.m_ackSnapshot, g_server.m_tick ) } ) );
+									 snapshot : g_serverGame.GetSnapshotsDiff( conn.m_lastAckSnapshot, g_server.m_tick ) } ) );
 	}
 }
 
 function TickHandler()
 {
-	g_game.NextStep();
+	g_serverGame.NextStep();
 
-	SendSnapshot();
+	SendSnapshots();
 
 	++g_server.m_tick;
 }
 
 function main()
 {
-	var TICKS_INTERVAL 	= 20; // milliseconds	
-
-	g_game = require( './world.js' ).CreateGame();
-
-	g_game.InitWorld();
+	var TICKS_INTERVAL 	= 20; // milliseconds
+	
+	g_serverGame = new GameModule.CreateGame();
+	g_serverGame.InitWorld();
 
 	InitServer();
 
