@@ -27,7 +27,7 @@ function Circle( a_pos, a_radius )
 
     var Init = function ()
     {
-        GenerateCirclePoints.apply( this );
+        GenerateCirclePoints.call( this );
         this.m_vertBuff = gl.createBuffer();
     }
 
@@ -77,7 +77,7 @@ function Circle( a_pos, a_radius )
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
 
-    Init.apply( this );    
+    Init.call( this );
 }
 
 function Rectangle( a_pos, a_width, a_height )
@@ -94,8 +94,8 @@ function Rectangle( a_pos, a_width, a_height )
     }
 
     var Init = function ()
-    {        
-        GenerateRectanglePoints.apply( this );
+    {
+        GenerateRectanglePoints.call( this );
         this.m_vertBuff = gl.createBuffer();
     }
 
@@ -106,17 +106,20 @@ function Rectangle( a_pos, a_width, a_height )
             this.m_verts[ i ]     += a_pos.m_x;
             this.m_verts[ i + 1 ] += a_pos.m_y;
         }
+
+        this.m_pos.m_x += a_pos.m_x;
+        this.m_pos.m_y += a_pos.m_y;
     }
 
     this.SetPos = function ( a_pos )
     {
         for ( var i = 0; i < 2 * this.m_size; i += 2 )
         {
-            this.m_verts[ i ]     += a_pos.m_x - this.m_pos;
-            this.m_verts[ i + 1 ] += a_pos.m_y - this.m_pos;
+            this.m_verts[ i ]     += a_pos.m_x - this.m_pos.m_x;
+            this.m_verts[ i + 1 ] += a_pos.m_y - this.m_pos.m_y;
         }
 
-        this.m_pos = new Vector( a_pos.m_x, a_pos.m_y );
+        this.m_pos = $.extend( false, {}, a_pos );
     }
 
     this.Draw = function()
@@ -127,8 +130,8 @@ function Rectangle( a_pos, a_width, a_height )
         gl.vertexAttribPointer( g_graphics.m_shaderProgram.m_positionAttribute, 2, gl.FLOAT, false, 0, 0 );
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
-   
-    Init.apply( this );
+
+    Init.call( this );
 }
 
 
@@ -142,9 +145,9 @@ function Line( a_begin, a_end, a_length )
                          a_end.m_x,   a_end.m_y ];
 
         this.m_size = 2;
-        this.m_vertBuff = gl.createBuffer();        
+        this.m_vertBuff = gl.createBuffer();
     }
-    
+
     this.ShiftOn = function ( a_pos )
     {
         for ( var i = 0; i < 2 * this.m_size; i += 2 )
@@ -160,9 +163,9 @@ function Line( a_begin, a_end, a_length )
         this.m_verts[ 3 ] += a_pos.m_y - this.m_verts[ 1 ];
 
         this.m_verts[ 0 ] = a_pos.m_x;
-        this.m_verts[ 1 ] = a_pos.m_y        
+        this.m_verts[ 1 ] = a_pos.m_y
     }
-    
+
     this.Draw = function ( a_color )
     {
         gl.lineWidth( 1.0 );
@@ -180,8 +183,8 @@ function Line( a_begin, a_end, a_length )
        this.m_verts[ 2 ] = this.m_verts[ 0 ] + a_dir.m_x * this.m_length;
        this.m_verts[ 3 ] = this.m_verts[ 1 ] + a_dir.m_y * this.m_length;
     }
-   
-    Init.apply( this );
+
+    Init.call( this );
 }
 
 function Triangle( a_pos )

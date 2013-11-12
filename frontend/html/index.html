@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html>
-	
+
 	<head>
     	<meta charset=utf-8>
 		<title>HTML5 game</title>
 
-        <script src='../scripts/jquery.js'></script>           
+        <script src='../scripts/jquery.js'></script>
         <script src='../scripts/graphics.js'></script>
         <script src='../scripts/geometry.js'></script>
         <script src='../scripts/barrel.js'></script>
         <script src='../scripts/character.js'></script>
-        <script src='../scripts/world.js'></script>
+        <script src='../scripts/client_game.js'></script>
         <script src='../scripts/cursor.js'></script>
-        <script src='../scripts/game.js'></script>
+        <script src='../scripts/client.js'></script>
+        <script src='../../shared/logger.js'></script>
+        <script src='../../shared/constants.js'></script>
 
         <style>
             canvas
@@ -53,11 +55,11 @@
             <p>
                 <input type='button' id='start_button' value='Start game' onclick='StartGame()'>
             </p>
-    		
+
             <canvas id='game-canvas' width='800' height='600'>
     			Your browser does not support HTML5 Canvas.
     		</canvas>
-            
+
             <p align='left' id='mouse_pos'>(0.0;0.0)</p>
             <p align='left' id='player_pos'>(0.0;0.0)</p>
             <p align='left' id='line1'>(0.0;0.0)</p>
