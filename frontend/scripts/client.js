@@ -4,7 +4,6 @@
 
 function OnOpen()
 {
-    g_server.m_start = true;
     g_webSocket.send( JSON.stringify( { type : 'login_get', login : 'undefined' } ) );
     InfLog( 'Send request for get login.' );
 }
@@ -32,11 +31,13 @@ function OnMessage( a_msg )
         case 'login' :
             InfLog( '[RECV]: Get login: ' + a_msg.login );
             g_world.m_player.m_id = a_msg.login;
+            g_client.m_start = true;
+            //setInterval( ShiftPlayer, 20 );
             ans = { type : 'login_ack' };
             break;
 
         case 'update' :
-            InfLog( '[RECV]: Get update for tick ' + a_msg.tick );
+            //InfLog( '[RECV]: Get update for tick ' + a_msg.tick );
             g_world.Update( a_msg, (new Date()).getTime() );
             ans = { type : 'update_ack', tick : a_msg.tick };
             break;
@@ -48,6 +49,12 @@ function OnMessage( a_msg )
     g_webSocket.send( JSON.stringify( ans ) );
 }
 
+function ShiftPlayer()
+{
+    g_client.m_shiftVec.m_x += 2;
+    g_shiftRTPlayer.m_x += 2;
+}
+
 /// Server event handlers
 /// End
 
@@ -56,64 +63,107 @@ function OnMessage( a_msg )
 
 function OnKeyDown( a_event )
 {
-    if ( !g_server.m_start )
+    if ( !g_client.m_start )
         return;
 
-    events = a_event || window.event;
+    var ev = a_event || window.event;
 
-    g_server.m_downKeys[ event.keyCode ] = true;
+    g_client.m_downKeys[ ev.keyCode ] = true;
 }
 
 function OnKeyUp( a_event )
 {
-     if ( !g_server.m_start )
+     if ( !g_client.m_start )
         return;
 
-    events = a_event || window.event;
+    var ev = a_event || window.event;
 
-    g_server.m_downKeys[ event.keyCode ] = false;
+    g_client.m_downKeys[ ev.keyCode ] = false;
 }
 
 function OnMouseMove( a_event )
 {
-    if ( !g_server.m_start )
+    var mouseX = a_event.pageX - canvas.offsetLeft;
+    var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
+
+    g_client.m_mouseMove        = true;
+    g_client.m_mouseLastPos.m_x = mouseX;
+    g_client.m_mouseLastPos.m_y = mouseY;
+}
+
+function OnClick( a_event )
+{
+    if ( !g_client.m_start )
         return;
 
     var mouseX = a_event.pageX - canvas.offsetLeft;
     var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
 
-    g_server.m_mouseMove        = true;
-    g_server.m_mouseLastPos.m_x = mouseX;
-    g_server.m_mouseLastPos.m_y = mouseY;
+    g_client.m_commands.push( { type : Commands.ATTACK, pos : g_world.GetPlayerPos, vec : { m_x : mouseX, m_y : mouseY } } );
+
+    document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + mouseX + ", " + mouseY + ")";
 }
 
-function ProcessUserControl ()
+function ProcessUserInput()
 {
-    var shiftValue = { m_x : 0.0, m_y : 0.0 };
+    g_cursor.SetPos( g_client.m_mouseLastPos );
+    document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_client.m_mouseLastPos.m_x + ", " + g_client.m_mouseLastPos.m_y + ")";
+
+    if ( !g_client.m_start )
+        return;
+
+    var shiftRTPlayer = { m_x : 0, m_y : 0 };
 
     //d
-    if ( g_server.m_downKeys[ 68 ] )
-        ++shiftValue.m_x;
+    if ( g_client.m_downKeys[ 68 ] )
+    {
+        ++g_client.m_shiftVec.m_x;
+        ++shiftRTPlayer.m_x;
+    }
 
     //a
-    if ( g_server.m_downKeys[ 65 ] )
-        --shiftValue.m_x;
+    if ( g_client.m_downKeys[ 65 ] )
+    {
+        --g_client.m_shiftVec.m_x;
+        --shiftRTPlayer.m_x;
+    }
 
     //w
-    if ( g_server.m_downKeys[ 87 ] )
-        ++shiftValue.m_y;
+    if ( g_client.m_downKeys[ 87 ] )
+    {
+        ++g_client.m_shiftVec.m_y;
+        ++shiftRTPlayer.m_y;
+    }
 
     //s
-    if ( g_server.m_downKeys[ 83 ] )
-        --shiftValue.m_y;
+    if ( g_client.m_downKeys[ 83 ] )
+    {
+        --g_client.m_shiftVec.m_y;
+        --shiftRTPlayer.m_y;
+    }
 
-    g_world.ProcessUserInput( shiftValue, g_server.m_mouseLastPos );
+    g_world.m_rtPlayer.ShiftOn( shiftRTPlayer );
 
-    g_server.m_controlVec.m_x += shiftValue.m_x;
-    g_server.m_controlVec.m_y += shiftValue.m_y;
+    //g_world.ProcessUserInput( shiftValue, g_client.m_mouseLastPos );
+}
 
-    g_cursor.SetPos( g_server.m_mouseLastPos );
-    document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_server.m_mouseLastPos.m_x + ", " + g_server.m_mouseLastPos.m_y + ")";
+function SendUserInput()
+{
+    if ( !g_client.m_start )
+        return;
+
+    if ( ( g_client.m_shiftVec.m_x !== 0 ) || ( g_client.m_shiftVec.m_y !== 0 ) )
+        g_client.m_commands.push( { type : Commands.MOVE, shift : g_client.m_shiftVec } );
+
+    if ( g_client.m_commands.length !== 0 )
+    {
+        g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
+        ++g_client.m_sentInpCnt;
+        InfLog( 'Sent user input. Total cnt: ' + g_client.m_sentInpCnt );
+    }
+
+    g_client.m_commands = [];
+    g_client.m_shiftVec = { m_x : 0, m_y : 0 };
 }
 
 /// Client input handlers
@@ -124,6 +174,7 @@ function OnLoad()
 	canvas = document.getElementById( 'game-canvas' );
 
     canvas.onmousemove = OnMouseMove;
+    canvas.onclick     = OnClick;
 
 	if ( !canvas )
 		alert( '[Error]: Can\'t find canvas element on page!' );
@@ -148,10 +199,12 @@ function OnLoad()
 		InitShaders();
 	}
 
-    g_server = new GameServer();
-    g_cursor = new Cursor( g_server.m_mouseLastPos );
-    g_world  = new World();
-    setInterval( NextState, 10 );
+    g_client            = new GameClient();
+    g_cursor            = new Cursor( g_client.m_mouseLastPos );
+    g_background        = new Background();
+    g_world             = new World();
+    setInterval( NextState, 20 );
+    setInterval( SendUserInput, 50 );
 }
 
 function StartGame()
@@ -165,24 +218,35 @@ function StartGame()
     g_webSocket.onclose     = OnClose;
     g_webSocket.onmessage   = OnMessage;
     g_webSocket.onerror     = OnError;
-
-    setInterval( NextState, 20 );
 }
 
 function NextState()
 {
-    if ( !g_server.m_start )
+    DrawGameField();
+
+    if ( !g_client.m_start )
         return;
 
-    ProcessUserControl();
     g_world.Draw();
+
+    ProcessUserInput();
+}
+
+function DrawGameField()
+{
+    gl.viewport( 0, 0, gl.viewportWidth, gl.viewportHeight );
+    gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+    gl.clear( gl.COLOR_BUFFER_BIT );
+    g_background.Draw();
     g_cursor.Draw();
 }
 
-function GameServer ()
+function GameClient ()
 {
-    this.m_controlVec   = { m_x : 0.0, m_y : 0.0 };
+    this.m_shiftVec   = { m_x : 0.0, m_y : 0.0 };
     this.m_start        = false;
     this.m_downKeys     = {};
-    this.m_mouseLastPos = { m_x : 0, m_y : canvas.height};
+    this.m_mouseLastPos = { m_x : 0, m_y : canvas.height };
+    this.m_commands     = [];
+    this.m_sentInpCnt   = 0;
 }

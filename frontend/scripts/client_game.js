@@ -5,6 +5,7 @@ function World()
 	var opponenCommandColor = [ 1.0, 0.0, 0.0, 0.3 ];
 	var wallColor			= [ 0.5, 0.5, 0.5, 1.0 ];
 	var bulletColor			= [ 0.0, 0.0, 0.0, 1.0 ];
+	var rtPlayerColor		= [ 0.0, 0.0, 0.0, 1.0 ];
 
 	var Init = function ()
 	{
@@ -13,14 +14,17 @@ function World()
 
 		this.m_snapshotObjList 	= [];
 	    this.m_state 			= { start : false, login : undefined };
-	    this.m_player 			= new Character( { m_x : 100.0, m_y : 100.0 } );
-	    this.m_background 		= new Background();
+	    //TO FIX: m_plyaer must be easier
+	    this.m_player			= new Character( { m_x : 100.0, m_y : 100.0 } );
+	    this.m_rtPlayer			= new Character( { m_x : 100.0, m_y : 100.0 } );
+	    this.m_recvPlayer		= false;
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
+	    this.m_playerDrawer		= new Circle( { m_x : 100, m_y : 100 }, Wall.WIDTH );
 	}
 
 	this.DrawObjects = function ()
 	{
-		InfLog( 'World to render : ' + JSON.stringify( this.m_renderWorld ) );
+		//InfLog( 'World to render : ' + JSON.stringify( this.m_renderWorld ) );
 
 		var currObj;
 
@@ -31,12 +35,20 @@ function World()
 			switch ( currObj.m_type )
 			{
 				case 'player' :
-					if ( currObj.m_id === this.m_plyaer.m_id )
-						currObj.Draw( ownPlayerColor );
+
+					if ( currObj.m_id === this.m_player.m_id )
+					{
+						if ( !this.m_recvPlayer )
+						{
+							this.m_recvPlayer = true;
+							this.m_rtPlayer.SetPos( currObj.m_pos );
+						}
+						this.DrawPlayer( currObj.m_pos, ownPlayerColor );
+					}
 					else if ( currObj.m_teamId === this.m_player.m_teamId )
-						currObj.Draw( ourCommandColor );
+						this.DrawPlayer( currObj.m_pos, ourCommandColor );
 					else
-						currObj.Draw( opponenCommandColor );
+						this.DrawPlayer( currObj.m_pos, opponenCommandColor );
 					break;
 
 				case 'wall' :
@@ -54,6 +66,12 @@ function World()
 		}
 	}
 
+	this.DrawPlayer = function ( a_pos, a_color )
+	{
+		this.m_playerDrawer.SetPos( a_pos );
+		this.m_playerDrawer.Draw( a_color );
+	}
+
 	this.DrawWall = function ( a_pos )
 	{
 		this.m_wallDrawer.SetPos( a_pos );
@@ -62,13 +80,11 @@ function World()
 
 	this.Draw = function ()
 	{
-	    gl.viewport( 0, 0, gl.viewportWidth, gl.viewportHeight );
-	    gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
-	    gl.clear( gl.COLOR_BUFFER_BIT );
-
-	    this.m_background.Draw();
 	    this.CreateWorldToDraw();
 	    this.DrawObjects();
+
+	    if ( this.m_recvPlayer )
+	    	this.m_rtPlayer.Draw( rtPlayerColor );
 	}
 
 	this.ProcessUserInput = function ( a_shiftVec, a_mousePos )
@@ -140,7 +156,7 @@ function World()
 
 		for ( var upId in rightSnapShotObj.m_updated )
 		{
-			var startPos = renderWorld[ upId ].m_pos;
+			var startPos = this.m_renderWorld[ upId ].m_pos;
 			var endPos   = rightSnapShotObj.m_snapshot[ upId ].m_pos;
 			var interPos = { m_x : startPos.m_x + ( endPos.m_x - startPos.m_x ) * factor,
 							 m_y : startPos.m_y + ( endPos.m_y - startPos.m_y ) * factor };
@@ -175,7 +191,7 @@ function World()
 			delete newSnapshot[ delId ];
 
 		for ( var upId in diffObj.m_updObjs )
-			newSnapshot[ upId ] = diffObj.updObjs[ upId ];
+			newSnapshot[ upId ] = diffObj.m_updObjs[ upId ];
 
 		for ( var addId in diffObj.m_addObjs )
 			newSnapshot[ addId ] = diffObj.m_addObjs[ addId ];
@@ -188,7 +204,7 @@ function World()
 									   m_snapshot  : newSnapshot,
 									   m_updated   : Object.keys( diffObj.m_updObjs ) } );
 
-		InfLog( 'With diff : ' + JSON.stringify( diffObj ) );
+		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) );
 	}
 
 	Init.call( this );

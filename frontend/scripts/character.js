@@ -13,7 +13,7 @@ function Character( a_pos )
         this.m_barrColor = [ 0.0, 0.0, 0.0, 1.0 ];
 
     }
-    
+
     this.SetPos = function( a_pos )
     {
         this.m_pos = $.extend( false, {}, a_pos );
@@ -25,16 +25,16 @@ function Character( a_pos )
         return this.m_pos;
     }
 
-    this.Draw = function()
+    this.Draw = function( a_color )
     {
-        this.m_figure.Draw( this.m_figColor );
+        this.m_figure.Draw( a_color );
         this.m_barrel.Draw( this.m_barrColor );
     }
 
     this.ShiftOn = function( a_pos )
     {
-        var shiftVec = { m_x : VELOCITY * a_pos.m_x, 
-                         m_y : VELOCITY * a_pos.m_y };
+        var shiftVec = { m_x : Player.VEL * a_pos.m_x,
+                         m_y : Player.VEL * a_pos.m_y };
 
         this.m_pos.m_x += shiftVec.m_x;
         this.m_pos.m_y += shiftVec.m_y;
@@ -67,7 +67,7 @@ function Character( a_pos )
 function Barrel( a_pos, a_length  )
 {
     var Init = function ()
-    {   
+    {
         this.m_line = new Line( { m_x : a_pos.m_x,              m_y : a_pos.m_y },
                                 { m_x : a_pos.m_x + a_length,   m_y : a_pos.m_y },
                                 a_length );

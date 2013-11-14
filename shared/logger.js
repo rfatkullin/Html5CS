@@ -1,10 +1,9 @@
 
 (function ()
 {
-	var dateObj = new Date();
-
 	var GetTime = function ()
 	{
+		var dateObj = new Date();
 		return dateObj.getHours() + ':' + dateObj.getMinutes() + ':' + dateObj.getSeconds() + ':' + dateObj.getMilliseconds();
 	}
 

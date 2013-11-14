@@ -1,4 +1,3 @@
-var GameCommands 	= require( '../shared/commands' );
 var Logger 			= require( '../shared/logger' ).Logger;
 var GameModule 		= require( './server_game' );
 
@@ -17,24 +16,24 @@ function MessageProcess( a_msg )
 	switch ( a_msg.type )
 	{
 		case 'login_get' :
-			this.send( JSON.stringify( { type : 'login', login : this.m_userId } ) );
 			Logger.Info( 'Client trying to connect. Sent login: ' + this.m_userId );
+			this.send( JSON.stringify( { type : 'login', login : this.m_userId } ) );
 			break;
 
 		case 'login_ack' :
+			Logger.Info( '[CL=' + this.m_userId + '] Logined.' );
 			this.m_logined = true;
 			g_world.AddNewPlayer( this.m_userId );
-			Logger.Info( '[C=' + this.m_userId + '] Logined.' );
 			break;
 
 		case 'control' :
-			g_world.ProcessUserInput( this.m_userId, a_msg );
-			Logger.Info( '[CL' + a_msg.login + ']:' + ' received control ' + a_msg.key.toString() );
+			Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received control.' );
+			g_world.ProcessUserInput( this.m_userId, a_msg.commands );
 			break;
 
 		case 'update_ack' :
+			Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received update ack ' + a_msg.tick );
 			this.m_lastAckSnapshot = a_msg.tick;
-			Logger.Info( '[CL' + a_msg.login + ']:' + ' received update ack ' + a_msg.tick );
 			break;
 
 		default :
@@ -45,11 +44,12 @@ function MessageProcess( a_msg )
 
 function OnClose()
 {
+	g_world.PlayerLeft( this.m_userId );
 	delete g_server.m_conns[ this.m_userId ];
 
 	--g_server.m_usersCnt;
 
-	Logger.Info( 'User ' + this.m_userId + ' left.' );
+	Logger.Info( '[CL=' + this.m_userId + ']' + ' left.' );
 }
 
 function GameServerWrapper()
@@ -103,14 +103,18 @@ function SendSnapshots()
 		if ( !conn.m_logined )
 			continue;
 
+		var sendSnapshot = g_world.GetSnapshotDiff( conn.m_lastAckSnapshot );
+
+		Logger.Info( 'Snapshot: ' + JSON.stringify( sendSnapshot ) );
+
 		conn.send( JSON.stringify( { type	: 'update',
 									 tick 	: g_server.m_tick,
-									 world 	: g_world.GetSnapshotDiff( conn.m_lastAckSnapshot ) } ) );
+									 world 	: sendSnapshot } ) );
 
 		++sentSnapshotsCnt;
 	}
 
-	Logger.Info( 'User cnt = ' + g_server.m_usersCnt + '. Sent snapshots cnt = ' + sentSnapshotsCnt );
+	//Logger.Info( 'User cnt = ' + g_server.m_usersCnt + '. Sent snapshots cnt = ' + sentSnapshotsCnt );
 }
 
 function TickHandler()

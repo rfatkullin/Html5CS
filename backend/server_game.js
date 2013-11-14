@@ -1,5 +1,7 @@
-var jQuery = require( 'jquery' );
-var Logger = require( '../shared/logger' ).Logger;
+var jQuery   = require( 'jquery' );
+var Logger   = require( '../shared/logger' ).Logger;
+var Commands = require( '../shared/commands' ).Commands;
+var Player   = require( '../shared/constants' ).Player;
 
 var CreateWorld = function()
 {
@@ -14,9 +16,11 @@ var CreateWorld = function()
 		this.m_playersCnt		= 0;
 		this.m_world    		= {};
 		this.m_addObjs  		= {};
-		this.m_updObjs		= {};
-		this.m_delObjs		= {};
+		this.m_updObjs			= {};
+		this.m_delObjs			= {};
 		this.m_snapshotObjList 	= []
+		this.m_teams			= [ 0, 0 ];
+		this.m_moveCmdCnt		= 0;
 
 		GenerateMap.call( this );
 	}
@@ -45,35 +49,38 @@ var CreateWorld = function()
 
 	this.ProcessUserInput = function( a_userId, a_controlObj )
 	{
+		Logger.Info( '[CL=' + a_userId + ']: Cmd: ' + JSON.stringify( a_controlObj ));
+
 		this.m_world[ a_userId ].m_commands = a_controlObj;
 	}
 
 	var ProcessAllInputs = function()
 	{
-		for ( var id in this.m_world )
+		for ( var objId in this.m_world )
 		{
-			if ( this.m_world[ id ].m_type != 'player' )
+			if ( this.m_world[ objId ].m_type != 'player' )
 				continue;
 
-			var player = this.m_world[ id ];
+			var player = this.m_world[ objId ];
 
 			if ( player.m_commands.length != 0 )
 			{
-				for ( var command in player.m_commands )
+				for ( var i = 0; i < player.m_commands.length; ++i )
 				{
-					switch ( command.type )
+					switch ( player.m_commands[ i ].type )
 					{
-						case GameCommands.Commands.ATTACK :
-							CreateBullet( i, command.pos, command.dir );
-							InfoLog( 'Process attack command for client ' + i + '.' );
+						case Commands.ATTACK :
+							//CreateBullet( i, command.pos, command.dir );
+							Logger.Info( '[CL=' + objId + ']: Attack command.' );
 							break;
 
-						case GameCommands.Commands.MOVE :
-							MovePlayer( i, command.diff )
-							InfoLog( 'Process move command for client ' + i + '.' );
+						case Commands.MOVE :
+							MovePlayer.call( this, objId, player.m_commands[ i ].shift );
+							++this.m_moveCmdCnt;
+							Logger.Info( '[CL=' + objId + ']: Move command. Total move commands cnt: ' + this.m_moveCmdCnt );
 							break;
 						default :
-							ErrLog( 'Non-existent command from client ' + i + '!' );
+							Logger.Error( '[CL=' + objId + ']: Non-existent command: ' + player.m_commands[ i ].type + '.' );
 							break;
 					}
 				}
@@ -83,14 +90,14 @@ var CreateWorld = function()
 		}
 	}
 
-	var MovePlayer = function( a_playerInd )
+	var MovePlayer = function( a_playerInd, a_shift )
 	{
 		var player = this.m_world[ a_playerInd ];
 
-		player.m_pos.m_x += a_diff.x;
-		player.m_pos.m_y += a_diff.y;
+		player.m_pos.m_x += Player.VEL * a_shift.m_x;
+		player.m_pos.m_y += Player.VEL * a_shift.m_y;
 
-		this.m_updObjs.push( a_playerInd );
+		this.m_updObjs[ a_playerInd ] = player;
 	}
 
 	var CreateBullet = function ( a_playerId, a_pos, a_dir )
@@ -136,17 +143,20 @@ var CreateWorld = function()
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
 
+		for ( var id in this.m_delObjs )
+			delete this.m_world[ id ];
+
 		this.m_snapshotObjList.push( {  m_tick 	   : a_currTick,
-										m_add 	   : jQuery.extend( true, {}, this.m_addObjs ),
-										m_update   : jQuery.extend( true, {}, this.m_updObjs ),
-										m_delete   : jQuery.extend( true, {}, this.m_delObjs ),
+										m_addObjs  : jQuery.extend( true, {}, this.m_addObjs ),
+										m_updObjs  : jQuery.extend( true, {}, this.m_updObjs ),
+										m_delObjs  : jQuery.extend( true, {}, this.m_delObjs ),
 									    m_snapshot : jQuery.extend( true, {}, this.m_world ) } );
 
 	    this.m_addObjs  = {};
 		this.m_updObjs	= {};
 		this.m_delObjs	= {};
 
-		Logger.Info( '[T=' + a_currTick +'] Snapshot world.' );
+		//Logger.Info( '[T=' + a_currTick +'] Snapshot world.' );
 	}
 
 	this.NextStep = function ( a_expiredTime, a_currTick )
@@ -156,7 +166,7 @@ var CreateWorld = function()
 		CollisionsDetect.call( this );
 		SnapshotWorld.call( this, a_currTick );
 
-		Logger.Info( '[T=' + a_currTick +'] NextStep completed.' );
+		//Logger.Info( '[T=' + a_currTick +'] NextStep completed.' );
 	}
 
 	this.GetSnapshotDiff = function ( a_startTick )
@@ -209,15 +219,28 @@ var CreateWorld = function()
 
 	this.AddNewPlayer = function ( a_userId )
 	{
-		var teamId = (this.m_playersCnt++) % 2;
+		var teamId = 0;
+
+		if ( this.m_teams[ 0 ] > this.m_teams[ 1 ] )
+			teamIdId = 1;
+
 		var pos    = jQuery.extend( false, {}, TeamsDeployPos[ teamId ] );
 
-		var player = { m_id     : a_userId,
-					   m_type   : 'player',
-					   m_teamId : teamId,
-					   m_pos 	: pos };
+		var player = { m_id     	: a_userId,
+					   m_type   	: 'player',
+					   m_teamId 	: teamId,
+					   m_pos 		: pos,
+					   m_commands 	: [] };
 
+		this.m_world[ a_userId ]   = player;
 		this.m_addObjs[ a_userId ] = player;
+	}
+
+	this.PlayerLeft = function ( a_userId )
+	{
+		this.m_teams[ this.m_world[ a_userId ].m_teamId ]--
+		delete this.m_world[ a_userId ];
+		this.m_delObjs[ a_userId ] = this.m_world[ a_userId ];
 	}
 
 	Init.call( this );
