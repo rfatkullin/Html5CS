@@ -51,7 +51,7 @@ var CreateWorld = function()
 	{
 		Logger.Info( '[CL=' + a_userId + ']: Cmd: ' + JSON.stringify( a_controlObj ));
 
-		this.m_world[ a_userId ].m_commands = a_controlObj;
+		this.m_world[ a_userId ].m_commands = this.m_world[ a_userId ].m_commands.concat( a_controlObj );
 	}
 
 	var ProcessAllInputs = function()

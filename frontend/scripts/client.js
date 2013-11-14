@@ -204,7 +204,7 @@ function OnLoad()
     g_background        = new Background();
     g_world             = new World();
     setInterval( NextState, 20 );
-    setInterval( SendUserInput, 50 );
+    setInterval( SendUserInput, 20 );
 }
 
 function StartGame()
