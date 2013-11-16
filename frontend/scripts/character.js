@@ -45,7 +45,7 @@ function Character( a_pos )
         var posDomElement = document.getElementById( "player_pos" ).innerHTML = "Player pos: (" + this.m_pos.m_x + ", " + this.m_pos.m_y + ")";
     }
 
-    this.ChangeBarrelDirTo = function ( a_point )
+    this.ChangeDirTo = function ( a_point )
     {
         var dir = { m_x : a_point.m_x - this.m_pos.m_x,
                     m_y : a_point.m_y - this.m_pos.m_y };
@@ -61,7 +61,7 @@ function Character( a_pos )
         this.m_barrel.ChangeDir( dir );
     }
 
-    Init.apply( this );
+    Init.call( this );
 }
 
 function Barrel( a_pos, a_length  )
@@ -88,6 +88,6 @@ function Barrel( a_pos, a_length  )
         this.m_line.ShiftOn( a_shiftVec );
     }
 
-    Init.apply( this );
+    Init.call( this );
 }
 

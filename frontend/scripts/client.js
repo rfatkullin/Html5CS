@@ -147,6 +147,30 @@ function ProcessUserInput()
     //g_world.ProcessUserInput( shiftValue, g_client.m_mouseLastPos );
 }
 
+function NormalizeVector( a_vec )
+{
+    var len = Math.sqrt( a_vec.m_x * a_vec.m_x + a_vec.m_y * a_vec.m_y );
+
+    if ( !( len <  Math.EPSILON ) )
+    {
+        a_vec.m_x /= len;
+        a_vec.m_y /= len;
+    }
+
+    return a_vec;
+}
+
+function GetDirection( a_point )
+{
+    var pos    = g_world.m_player.m_pos;
+    var dirVec = { m_x : a_point.m_x - pos.m_x,
+                   m_y : a_point.m_y - pos.m_y };
+
+    NormalizeVector( dirVec );
+
+    return dirVec;
+}
+
 function SendUserInput()
 {
     if ( !g_client.m_start )
@@ -155,12 +179,14 @@ function SendUserInput()
     if ( ( g_client.m_shiftVec.m_x !== 0 ) || ( g_client.m_shiftVec.m_y !== 0 ) )
         g_client.m_commands.push( { type : Commands.MOVE, shift : g_client.m_shiftVec } );
 
-    if ( g_client.m_commands.length !== 0 )
-    {
-        g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
-        ++g_client.m_sentInpCnt;
-        InfLog( 'Sent user input. Total cnt: ' + g_client.m_sentInpCnt );
-    }
+    var newDir = NormalizeVector( g_client.m_mouseLastPos );
+
+    g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
+
+    g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
+
+    ++g_client.m_sentInpCnt;
+    InfLog( 'Sent user input. Total cnt: ' + g_client.m_sentInpCnt );
 
     g_client.m_commands = [];
     g_client.m_shiftVec = { m_x : 0, m_y : 0 };
@@ -204,7 +230,7 @@ function OnLoad()
     g_background        = new Background();
     g_world             = new World();
     setInterval( NextState, 20 );
-    setInterval( SendUserInput, 20 );
+    setInterval( SendUserInput, 50 );
 }
 
 function StartGame()

@@ -19,7 +19,7 @@ function World()
 	    this.m_rtPlayer			= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_recvPlayer		= false;
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
-	    this.m_playerDrawer		= new Circle( { m_x : 100, m_y : 100 }, Wall.WIDTH );
+	    this.m_playerDrawer		= new Circle( { m_x : 100, m_y : 100 }, Player.RAD + 5 );
 	}
 
 	this.DrawObjects = function ()
@@ -36,19 +36,7 @@ function World()
 			{
 				case 'player' :
 
-					if ( currObj.m_id === this.m_player.m_id )
-					{
-						if ( !this.m_recvPlayer )
-						{
-							this.m_recvPlayer = true;
-							this.m_rtPlayer.SetPos( currObj.m_pos );
-						}
-						this.DrawPlayer( currObj.m_pos, ownPlayerColor );
-					}
-					else if ( currObj.m_teamId === this.m_player.m_teamId )
-						this.DrawPlayer( currObj.m_pos, ourCommandColor );
-					else
-						this.DrawPlayer( currObj.m_pos, opponenCommandColor );
+					this.DrawCommonPlayer( currObj );
 					break;
 
 				case 'wall' :
@@ -66,9 +54,28 @@ function World()
 		}
 	}
 
-	this.DrawPlayer = function ( a_pos, a_color )
+	this.DrawCommonPlayer( a_player )
 	{
-		this.m_playerDrawer.SetPos( a_pos );
+		if ( a_player.m_id === this.m_player.m_id )
+		{
+			if ( !this.m_recvPlayer )
+			{
+				this.m_recvPlayer = true;
+				this.m_rtPlayer.SetPos( a_player.m_pos );
+			}
+
+			this.DrawPlayer( a_player, ownPlayerColor );
+		}
+		else if ( a_player.m_teamId === this.m_player.m_teamId )
+			this.DrawPlayer( a_player, ourCommandColor );
+		else
+			this.DrawPlayer( a_player, opponenCommandColor );
+	}
+
+	this.DrawPlayer = function ( a_player, a_color )
+	{
+		this.m_playerDrawer.SetPos( a_player.m_pos );
+		this.m_playerDrawer.ChangeDirTo( a_player.m_dir );
 		this.m_playerDrawer.Draw( a_color );
 	}
 

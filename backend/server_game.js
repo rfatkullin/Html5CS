@@ -40,6 +40,9 @@ var CreateWorld = function()
 
 		TeamsDeployPos = [ { m_x : 100, 			m_y : MAP_HEIGHT / 2 },
 						   { m_x : MAP_WIDTH - 100, m_y : MAP_HEIGHT / 2 } ];
+
+		TeamsDir 	   = [ { m_x :  1, m_y : 0 },
+						   { m_x : -1, m_y : 0 } ];
 	}
 
 	this.GetUniqueId = function ()
@@ -79,6 +82,13 @@ var CreateWorld = function()
 							++this.m_moveCmdCnt;
 							Logger.Info( '[CL=' + objId + ']: Move command. Total move commands cnt: ' + this.m_moveCmdCnt );
 							break;
+
+						case Commands.CHANGE_DIR :
+							PlayerChangeDir.call( this, objId, player.m_commands[ i ].dir );
+
+							Logger.Info( '[CL=' + objId + ']: Change command.' );
+							break;
+
 						default :
 							Logger.Error( '[CL=' + objId + ']: Non-existent command: ' + player.m_commands[ i ].type + '.' );
 							break;
@@ -88,6 +98,15 @@ var CreateWorld = function()
 
 			player.m_commands = [];
 		}
+	}
+
+	var ChangePlayerDir(  a_playerInd, a_dir )
+	{
+		var player = this.m_world[ a_playerInd ];
+
+		player.m_dir = a_dir;
+
+		this.m_updObjs[ a_playerInd ] = player;
 	}
 
 	var MovePlayer = function( a_playerInd, a_shift )
@@ -224,12 +243,14 @@ var CreateWorld = function()
 		if ( this.m_teams[ 0 ] > this.m_teams[ 1 ] )
 			teamIdId = 1;
 
-		var pos    = jQuery.extend( false, {}, TeamsDeployPos[ teamId ] );
+		var pos = jQuery.extend( false, {}, TeamsDeployPos[ teamId ] );
+		var dir = jQuery.extend( false, {}, TeamsDir[ teamId ] );
 
 		var player = { m_id     	: a_userId,
 					   m_type   	: 'player',
 					   m_teamId 	: teamId,
 					   m_pos 		: pos,
+					   m_dir  		: dir,
 					   m_commands 	: [] };
 
 		this.m_world[ a_userId ]   = player;
