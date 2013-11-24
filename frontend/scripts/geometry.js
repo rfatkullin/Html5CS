@@ -192,3 +192,29 @@ function Triangle( a_pos )
     this.m_verts = [ 100.0, 100.0, 200.0, 100.0, 150.0, 150.0  ];
     this.m_size  = 3;
 }
+
+function NormalizeVector( a_vec )
+{
+    var normVec = $.extend( false, {}, a_vec );
+    var len = Math.sqrt( normVec.m_x * normVec.m_x + normVec.m_y * normVec.m_y );
+
+    if ( !( len < EPSILON ) )
+    {
+        normVec.m_x /= len;
+        normVec.m_y /= len;
+    }
+
+    return normVec;
+}
+
+function GetDirection( a_p1, a_p2 )
+{
+    var dirVec = { m_x : a_p2.m_x - a_p1.m_x,
+                   m_y : a_p2.m_y - a_p1.m_y };
+
+    NormalizeVector( dirVec );
+
+    return dirVec;
+}
+
+EPSILON = 0.000000001;

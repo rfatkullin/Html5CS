@@ -17,9 +17,9 @@ function World()
 	    //TO FIX: m_plyaer must be easier
 	    this.m_player			= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_rtPlayer			= new Character( { m_x : 100.0, m_y : 100.0 } );
+	    this.m_player.m_figure.SetRadius( 30 )
 	    this.m_recvPlayer		= false;
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
-	    this.m_playerDrawer		= new Circle( { m_x : 100, m_y : 100 }, Player.RAD + 5 );
 	}
 
 	this.DrawObjects = function ()
@@ -54,13 +54,14 @@ function World()
 		}
 	}
 
-	this.DrawCommonPlayer( a_player )
+	this.DrawCommonPlayer = function ( a_player )
 	{
 		if ( a_player.m_id === this.m_player.m_id )
 		{
 			if ( !this.m_recvPlayer )
 			{
 				this.m_recvPlayer = true;
+				this.m_player.SetPos( a_player.m_pos );
 				this.m_rtPlayer.SetPos( a_player.m_pos );
 			}
 
@@ -74,9 +75,15 @@ function World()
 
 	this.DrawPlayer = function ( a_player, a_color )
 	{
-		this.m_playerDrawer.SetPos( a_player.m_pos );
-		this.m_playerDrawer.ChangeDirTo( a_player.m_dir );
-		this.m_playerDrawer.Draw( a_color );
+		this.m_player.SetPos( a_player.m_pos );
+		this.m_player.ChangeDir( a_player.m_dir );
+		this.m_player.Draw( a_color );
+
+		//InfLog( 'Player obj :' + JSON.stringify( a_player ) +  '.' );
+
+		// this.m_rtPlayer.SetPos( a_player.m_pos );
+		// this.m_rtPlayer.ChangeDir( a_player.m_dir );
+		// this.m_rtPlayer.Draw( rtPlayerColor );
 	}
 
 	this.DrawWall = function ( a_pos )
@@ -89,20 +96,6 @@ function World()
 	{
 	    this.CreateWorldToDraw();
 	    this.DrawObjects();
-
-	    if ( this.m_recvPlayer )
-	    	this.m_rtPlayer.Draw( rtPlayerColor );
-	}
-
-	this.ProcessUserInput = function ( a_shiftVec, a_mousePos )
-	{
-		this.m_player.ShiftOn( a_shiftVec );
-		this.m_player.ChangeBarrelDirTo( a_mousePos );
-	}
-
-	this.MouseMove = function ( a_mousePos )
-	{
-		this.m_player.ChangeBarrelDirTo( a_mousePos );
 	}
 
 	this.CreateWorldToDraw = function ()
@@ -129,7 +122,7 @@ function World()
 		{
 			//Snapshot is lost -> extrapolating
 			//Extrapolation();
-			InfLog( 'Snapshots lost. Extraploation.' + 'Last snapshot time: ' + this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp + ' Render time: ' + renderTime );
+			//InfLog( 'Snapshots lost. Extraploation.' + 'Last snapshot time: ' + this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp + ' Render time: ' + renderTime );
 			return;
 		}
 
@@ -151,24 +144,55 @@ function World()
 		this.Interpolate( leftBound, rightBound, renderTime );
 	}
 
+	this.InterpolatePos = function ( a_startPos, a_endPos, a_factor )
+	{
+		return { m_x : a_startPos.m_x + ( a_endPos.m_x - a_startPos.m_x ) * a_factor,
+				 m_y : a_startPos.m_y + ( a_endPos.m_y - a_startPos.m_y ) * a_factor };
+	}
+
+	this.InterpolateDir = function ( a_startDir, a_endDir, a_factor )
+	{
+		var rightRotate = false;
+		var pseudoScalar = a_startDir.m_x * a_endDir.m_y - a_startDir.m_y * a_endDir.m_x;
+
+		if ( pseudoScalar < EPSILON )
+			rightRotate = true;
+
+		var angle = Math.acos( a_startDir.m_x * a_endDir.m_x + a_startDir.m_y * a_endDir.m_y );
+		var middleAngle = a_factor * angle * ( rightRotate ? -1 : 1 );
+
+		var cosVal = Math.cos( middleAngle );
+		var sinVal = Math.sin( middleAngle );
+
+		var x = a_startDir.m_x * cosVal - a_startDir.m_y * sinVal;
+		var y = a_startDir.m_x * sinVal + a_startDir.m_y * cosVal;
+
+		return { m_x : x, m_y : y };
+	}
+
 	this.Interpolate = function ( a_leftBound, a_rightBound, a_renderTime )
 	{
 		var leftSnapShotObj  = this.m_snapshotObjList[ a_leftBound ];
 		var rightSnapShotObj = this.m_snapshotObjList[ a_rightBound ];
 
 		var interval = rightSnapShotObj.m_timeStamp - leftSnapShotObj.m_timeStamp;
-		var factor   = ( a_renderTime - rightSnapShotObj.m_timeStamp ) / interval;
+		var factor   = ( a_renderTime - leftSnapShotObj.m_timeStamp ) / interval;
 
 		this.m_renderWorld = jQuery.extend( true, {}, leftSnapShotObj.m_snapshot );
 
-		for ( var upId in rightSnapShotObj.m_updated )
+		for ( var upId, i = 0; i < rightSnapShotObj.m_updated.length; ++i )
 		{
-			var startPos = this.m_renderWorld[ upId ].m_pos;
-			var endPos   = rightSnapShotObj.m_snapshot[ upId ].m_pos;
-			var interPos = { m_x : startPos.m_x + ( endPos.m_x - startPos.m_x ) * factor,
-							 m_y : startPos.m_y + ( endPos.m_y - startPos.m_y ) * factor };
+			upId = rightSnapShotObj.m_updated[ i ];
 
-			this.m_renderWorld[ upId ].m_pos = interPos;
+			this.m_renderWorld[ upId ].m_pos = this.InterpolatePos( leftSnapShotObj.m_snapshot[ upId ].m_pos,
+																	rightSnapShotObj.m_snapshot[ upId ].m_pos,
+																	factor );
+
+			this.m_renderWorld[ upId ].m_dir = this.InterpolateDir( leftSnapShotObj.m_snapshot[ upId ].m_dir,
+			 	   				 			   						rightSnapShotObj.m_snapshot[ upId ].m_dir,
+			 	 				 			   						factor );
+
+			InfLog( 'Update object : id = ' + upId + ' type = ' + this.m_renderWorld[ upId ].m_type + ' Pos : ' + JSON.stringify( this.m_renderWorld[ upId ] ) +  '.' );
 		}
 	}
 
@@ -192,7 +216,7 @@ function World()
 
 		var lastSnapshot = this.m_snapshotObjList[ this.m_snapshotObjList.length - 1 ].m_snapshot;
 
-		var newSnapshot = jQuery.extend( true, {}, lastSnapshot );
+		var newSnapshot = $.extend( true, {}, lastSnapshot );
 
 		for ( var delId in diffObj.m_delObjs )
 			delete newSnapshot[ delId ];
@@ -211,7 +235,7 @@ function World()
 									   m_snapshot  : newSnapshot,
 									   m_updated   : Object.keys( diffObj.m_updObjs ) } );
 
-		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) );
+		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
 	Init.call( this );

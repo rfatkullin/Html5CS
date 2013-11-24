@@ -4,20 +4,21 @@ function Character( a_pos )
     const VELOCITY      = 5.0;
     const BARREL_LENGTH = 30.0;
 
-    var Init = function ()
-    {
-        this.m_pos    = $.extend( false, {}, a_pos );
-        this.m_figure = new Circle( a_pos, RADIUS );
-        this.m_barrel = new Barrel( a_pos, BARREL_LENGTH );
-        this.m_figColor  = [ 0.0, 1.0, 0.0, 0.3 ];
-        this.m_barrColor = [ 0.0, 0.0, 0.0, 1.0 ];
 
-    }
+    this.m_pos    = $.extend( false, {}, a_pos );
+    this.m_figure = new Circle( a_pos, RADIUS );
+    this.m_figColor  = [ 0.0, 1.0, 0.0, 0.3 ];
+    this.m_barrColor = [ 0.0, 0.0, 0.0, 1.0 ];
+
+    this.m_barrel = new Line( { m_x : a_pos.m_x,                 m_y : a_pos.m_y },
+                              { m_x : a_pos.m_x + BARREL_LENGTH, m_y : a_pos.m_y },
+                              BARREL_LENGTH );
 
     this.SetPos = function( a_pos )
     {
         this.m_pos = $.extend( false, {}, a_pos );
         this.m_figure.SetPos( a_pos );
+        this.m_barrel.SetPos( a_pos );
     }
 
     this.GetPos = function()
@@ -45,7 +46,7 @@ function Character( a_pos )
         var posDomElement = document.getElementById( "player_pos" ).innerHTML = "Player pos: (" + this.m_pos.m_x + ", " + this.m_pos.m_y + ")";
     }
 
-    this.ChangeDirTo = function ( a_point )
+    this.ChangeDirToPoint = function ( a_point )
     {
         var dir = { m_x : a_point.m_x - this.m_pos.m_x,
                     m_y : a_point.m_y - this.m_pos.m_y };
@@ -61,33 +62,8 @@ function Character( a_pos )
         this.m_barrel.ChangeDir( dir );
     }
 
-    Init.call( this );
-}
-
-function Barrel( a_pos, a_length  )
-{
-    var Init = function ()
-    {
-        this.m_line = new Line( { m_x : a_pos.m_x,              m_y : a_pos.m_y },
-                                { m_x : a_pos.m_x + a_length,   m_y : a_pos.m_y },
-                                a_length );
-    }
-
     this.ChangeDir = function ( a_dir )
     {
-        this.m_line.ChangeDir( a_dir );
+        this.m_barrel.ChangeDir( a_dir );
     }
-
-    this.Draw = function ( a_color )
-    {
-        this.m_line.Draw( a_color );
-    }
-
-    this.ShiftOn = function ( a_shiftVec )
-    {
-        this.m_line.ShiftOn( a_shiftVec );
-    }
-
-    Init.call( this );
 }
-

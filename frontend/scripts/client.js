@@ -69,6 +69,8 @@ function OnKeyDown( a_event )
     var ev = a_event || window.event;
 
     g_client.m_downKeys[ ev.keyCode ] = true;
+
+    InfLog( '[RECV]: Key down: ' + ev.keyCode );
 }
 
 function OnKeyUp( a_event )
@@ -79,6 +81,8 @@ function OnKeyUp( a_event )
     var ev = a_event || window.event;
 
     g_client.m_downKeys[ ev.keyCode ] = false;
+
+    InfLog( '[RECV]: Key up: ' + ev.keyCode );
 }
 
 function OnMouseMove( a_event )
@@ -86,7 +90,10 @@ function OnMouseMove( a_event )
     var mouseX = a_event.pageX - canvas.offsetLeft;
     var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
 
-    g_client.m_mouseMove        = true;
+    if ( ( mouseX > canvas.width ) || ( mouseY > canvas.height ) )
+        return;
+
+    g_mouseMove                 = true;
     g_client.m_mouseLastPos.m_x = mouseX;
     g_client.m_mouseLastPos.m_y = mouseY;
 }
@@ -99,14 +106,25 @@ function OnClick( a_event )
     var mouseX = a_event.pageX - canvas.offsetLeft;
     var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
 
-    g_client.m_commands.push( { type : Commands.ATTACK, pos : g_world.GetPlayerPos, vec : { m_x : mouseX, m_y : mouseY } } );
+    //g_client.m_commands.push( { type : Commands.ATTACK, pos : g_world.GetPlayerPos, vec : { m_x : mouseX, m_y : mouseY } } );
 
     document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + mouseX + ", " + mouseY + ")";
 }
 
 function ProcessUserInput()
 {
-    g_cursor.SetPos( g_client.m_mouseLastPos );
+    if ( g_mouseMove )
+    {
+        g_cursor.SetPos( g_client.m_mouseLastPos );
+
+        var newDir = NormalizeVector( GetDirection( g_world.m_player.m_pos, g_client.m_mouseLastPos ) );
+        g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
+
+        g_world.m_rtPlayer.ChangeDir( newDir );
+
+        g_mouseMove = false;
+    }
+
     document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_client.m_mouseLastPos.m_x + ", " + g_client.m_mouseLastPos.m_y + ")";
 
     if ( !g_client.m_start )
@@ -115,60 +133,38 @@ function ProcessUserInput()
     var shiftRTPlayer = { m_x : 0, m_y : 0 };
 
     //d
-    if ( g_client.m_downKeys[ 68 ] )
+    if ( g_client.m_downKeys[ 68 ] === true )
     {
         ++g_client.m_shiftVec.m_x;
         ++shiftRTPlayer.m_x;
+        g_shiftPlayer = true;
     }
 
     //a
-    if ( g_client.m_downKeys[ 65 ] )
+    if ( g_client.m_downKeys[ 65 ] === true )
     {
         --g_client.m_shiftVec.m_x;
         --shiftRTPlayer.m_x;
+        g_shiftPlayer = true;
     }
 
     //w
-    if ( g_client.m_downKeys[ 87 ] )
+    if ( g_client.m_downKeys[ 87 ] === true )
     {
         ++g_client.m_shiftVec.m_y;
         ++shiftRTPlayer.m_y;
+        g_shiftPlayer = true;
     }
 
     //s
-    if ( g_client.m_downKeys[ 83 ] )
+    if ( g_client.m_downKeys[ 83 ] === true )
     {
         --g_client.m_shiftVec.m_y;
         --shiftRTPlayer.m_y;
+        g_shiftPlayer = true;
     }
 
     g_world.m_rtPlayer.ShiftOn( shiftRTPlayer );
-
-    //g_world.ProcessUserInput( shiftValue, g_client.m_mouseLastPos );
-}
-
-function NormalizeVector( a_vec )
-{
-    var len = Math.sqrt( a_vec.m_x * a_vec.m_x + a_vec.m_y * a_vec.m_y );
-
-    if ( !( len <  Math.EPSILON ) )
-    {
-        a_vec.m_x /= len;
-        a_vec.m_y /= len;
-    }
-
-    return a_vec;
-}
-
-function GetDirection( a_point )
-{
-    var pos    = g_world.m_player.m_pos;
-    var dirVec = { m_x : a_point.m_x - pos.m_x,
-                   m_y : a_point.m_y - pos.m_y };
-
-    NormalizeVector( dirVec );
-
-    return dirVec;
 }
 
 function SendUserInput()
@@ -176,18 +172,13 @@ function SendUserInput()
     if ( !g_client.m_start )
         return;
 
-    if ( ( g_client.m_shiftVec.m_x !== 0 ) || ( g_client.m_shiftVec.m_y !== 0 ) )
+    if ( g_shiftPlayer )
         g_client.m_commands.push( { type : Commands.MOVE, shift : g_client.m_shiftVec } );
 
-    var newDir = NormalizeVector( g_client.m_mouseLastPos );
+    if ( g_client.m_commands.length > 0 )
+        g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
 
-    g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
-
-    g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
-
-    ++g_client.m_sentInpCnt;
-    InfLog( 'Sent user input. Total cnt: ' + g_client.m_sentInpCnt );
-
+    g_shiftPlayer = false;
     g_client.m_commands = [];
     g_client.m_shiftVec = { m_x : 0, m_y : 0 };
 }
@@ -201,6 +192,7 @@ function OnLoad()
 
     canvas.onmousemove = OnMouseMove;
     canvas.onclick     = OnClick;
+    canvas.onkeyup     = OnKeyUp;
 
 	if ( !canvas )
 		alert( '[Error]: Can\'t find canvas element on page!' );
@@ -229,6 +221,10 @@ function OnLoad()
     g_cursor            = new Cursor( g_client.m_mouseLastPos );
     g_background        = new Background();
     g_world             = new World();
+
+    g_mouseMove         = false;
+    g_shiftPlayer       = false;
+
     setInterval( NextState, 20 );
     setInterval( SendUserInput, 50 );
 }
@@ -256,6 +252,8 @@ function NextState()
     g_world.Draw();
 
     ProcessUserInput();
+
+    var testVec = g_world.InterpolateDir( { m_x : 0.0, m_y : 1.0 }, { m_x : 1.0, m_y : 0.0 }, 0.5 )
 }
 
 function DrawGameField()

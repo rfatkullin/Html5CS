@@ -100,7 +100,7 @@ var CreateWorld = function()
 		}
 	}
 
-	var ChangePlayerDir(  a_playerInd, a_dir )
+	var PlayerChangeDir = function ( a_playerInd, a_dir )
 	{
 		var player = this.m_world[ a_playerInd ];
 
