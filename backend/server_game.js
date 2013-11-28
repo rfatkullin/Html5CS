@@ -1,31 +1,17 @@
 var jQuery   = require( 'jquery' );
+var Geometry = require( './server_geometry.js' ).Geometry;
 var Logger   = require( '../shared/logger' ).Logger;
 var Commands = require( '../shared/commands' ).Commands;
 var Player   = require( '../shared/constants' ).Player;
+
 
 var CreateWorld = function()
 {
 	var SNAPSHOTS_CNT 	= 40; // sequence for 1000 / TICKS_INTERVAL * SNAPSHOTS_CNT seconds
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
-	var BULLET_VEL		= 100;
 
-	var Init = function ()
-	{
-		this.m_currObjId		= 0;
-		this.m_playersCnt		= 0;
-		this.m_world    		= {};
-		this.m_addObjs  		= {};
-		this.m_updObjs			= {};
-		this.m_delObjs			= {};
-		this.m_snapshotObjList 	= []
-		this.m_teams			= [ 0, 0 ];
-		this.m_moveCmdCnt		= 0;
-
-		GenerateMap.call( this );
-	}
-
-	var GenerateMap = function ()
+	this.GenerateMap = function ()
 	{
 		var wall1 = { m_id   : this.GetUniqueId(),
 					  m_type : 'wall',
@@ -37,6 +23,9 @@ var CreateWorld = function()
 
 		this.m_world[ wall1.m_id ] = wall1;
 		this.m_world[ wall2.m_id ] = wall2;
+
+		this.m_walls[ wall1.m_id ] = new Geometry.Rectangle( wall1.m_pos, Wall.WIDTH, Wall.HEIGHT );
+		this.m_walls[ wall2.m_id ] = new Geometry.Rectangle( wall2.m_pos, Wall.WIDTH, Wall.HEIGHT );
 
 		TeamsDeployPos = [ { m_x : 100, 			m_y : MAP_HEIGHT / 2 },
 						   { m_x : MAP_WIDTH - 100, m_y : MAP_HEIGHT / 2 } ];
@@ -57,7 +46,7 @@ var CreateWorld = function()
 		this.m_world[ a_userId ].m_commands = this.m_world[ a_userId ].m_commands.concat( a_controlObj );
 	}
 
-	var ProcessAllInputs = function()
+	this.ProcessAllInputs = function()
 	{
 		for ( var objId in this.m_world )
 		{
@@ -73,24 +62,23 @@ var CreateWorld = function()
 					switch ( player.m_commands[ i ].type )
 					{
 						case Commands.ATTACK :
-							//CreateBullet( i, command.pos, command.dir );
-							Logger.Info( '[CL=' + objId + ']: Attack command.' );
+
+							this.CreateBullet( objId, player.m_commands[ i ].pos, player.m_commands[ i ].dir );
 							break;
 
 						case Commands.MOVE :
-							MovePlayer.call( this, objId, player.m_commands[ i ].shift );
-							++this.m_moveCmdCnt;
-							Logger.Info( '[CL=' + objId + ']: Move command. Total move commands cnt: ' + this.m_moveCmdCnt );
+
+							this.MovePlayer( objId, player.m_commands[ i ].shift );
 							break;
 
 						case Commands.CHANGE_DIR :
-							PlayerChangeDir.call( this, objId, player.m_commands[ i ].dir );
 
-							Logger.Info( '[CL=' + objId + ']: Change command.' );
+							this.PlayerChangeDir( objId, player.m_commands[ i ].dir );
 							break;
 
 						default :
-							Logger.Error( '[CL=' + objId + ']: Non-existent command: ' + player.m_commands[ i ].type + '.' );
+
+							Logger.Error( '[CL= ' + objId + ' ]: Non-existent command: ' + player.m_commands[ i ].type + '.' );
 							break;
 					}
 				}
@@ -100,7 +88,7 @@ var CreateWorld = function()
 		}
 	}
 
-	var PlayerChangeDir = function ( a_playerInd, a_dir )
+	this.PlayerChangeDir = function ( a_playerInd, a_dir )
 	{
 		var player = this.m_world[ a_playerInd ];
 
@@ -109,7 +97,7 @@ var CreateWorld = function()
 		this.m_updObjs[ a_playerInd ] = player;
 	}
 
-	var MovePlayer = function( a_playerInd, a_shift )
+	this.MovePlayer = function( a_playerInd, a_shift )
 	{
 		var player = this.m_world[ a_playerInd ];
 
@@ -119,24 +107,16 @@ var CreateWorld = function()
 		this.m_updObjs[ a_playerInd ] = player;
 	}
 
-	var CreateBullet = function ( a_playerId, a_pos, a_dir )
+	this.IsOutOfField = function ( a_pos )
 	{
-		var pos = jQuery.extend( true, {}, a_pos );
-		var vel = { m_x : a_dir.m_x * BULLET_VEL,
-					m_y : a_dir.m_y * BULLET_VEL };
+		if ( a_pos.m_x < 0 || a_pos.m_x > MAP_WIDTH ||
+			 a_pos.m_y < 0 || a_pos.m_y > MAP_HEIGHT )
+			return true;
 
-		var bullet = { m_id    : this.GetUniqueId(),
-					   m_type  : 'bullet',
-					   m_pos   : pos,
-					   m_vel   : vel,
-					   m_ownId : a_playerInd,
-					   m_team  : this.m_world[ a_playerInd ].m_teamId };
-
-		this.m_world[ bullet.m_id ] = bullet;
-		this.m_addObjs.push( bullet.m_id );
+		return false;
 	}
 
-	var MoveAllObjects = function ( a_expiredTime )
+	this.MoveAllObjects = function ( a_expiredTime )
 	{
 		for ( var id in this.m_world )
 		{
@@ -148,16 +128,73 @@ var CreateWorld = function()
 			modObj.m_pos.m_x += a_expiredTime * modObj.m_vel.m_x;
 			modObj.m_pos.m_y += a_expiredTime * modObj.m_vel.m_y;
 
+			if ( this.IsOutOfField( modObj.m_pos ) === true )
+			{
+				var delList = {};
+				delList[ id ] = true;
+				this.DeleteObjects( delList );
+			}
+
 			this.m_updObjs[ id ] = this.m_world[ id ];
 		}
 	}
 
-	var CollisionsDetect = function()
+	this.DeleteObjects = function ( a_idList )
 	{
+		for ( var id in a_idList )
+		{
+			switch ( this.m_world[ id ].m_type )
+			{
+				case 'player' :
+					this.m_teams[ this.m_world[ a_userId ].m_teamId ]--
+					delete this.m_players[ id ];
+					break;
 
+				case 'bullet' :
+					delete this.m_bullets[ id ];
+					break;
+
+				case 'wall' :
+					delete this.m_walls[ id ];
+					break;
+
+				default :
+					break;
+			}
+
+			this.m_delObjs[ id ] = this.m_world[ id ];
+			delete this.m_world[ id ];
+			delete a_idList[ id ];
+		}
 	}
 
-	var SnapshotWorld = function ( a_currTick )
+	this.CollisionsDetect = function()
+	{
+		var forDelete = {};
+
+		for ( var bulletId in this.m_bullets )
+		{
+			for ( var wallId in this.m_walls )
+			{
+				if ( Geometry.PointInRect( this.m_world[ bulletId ].m_pos, this.m_walls[ wallId ] ) === true )
+					forDelete[ bulletId ] = true;
+			}
+
+			for ( var playerId in this.m_players )
+			{
+				if ( ( this.m_world[ bulletId ].m_teamId !== this.m_world[ playerId ].m_teamId ) &&
+					 ( Geometry.PointInCircle( this.m_world[ bulletId ].m_pos, this.m_walls[ m_players ],m_pos, Player.RAD ) === true ))
+				{
+					forDelete[ bulletId ] = true;
+					forDelete[ playerId ] = true;
+				}
+			}
+		}
+
+		this.DeleteObjects( forDelete );
+	}
+
+	this.SnapshotWorld = function ( a_currTick )
 	{
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
@@ -174,18 +211,14 @@ var CreateWorld = function()
 	    this.m_addObjs  = {};
 		this.m_updObjs	= {};
 		this.m_delObjs	= {};
-
-		//Logger.Info( '[T=' + a_currTick +'] Snapshot world.' );
 	}
 
 	this.NextStep = function ( a_expiredTime, a_currTick )
 	{
-		ProcessAllInputs.call( this );
-		MoveAllObjects.call( this );
-		CollisionsDetect.call( this );
-		SnapshotWorld.call( this, a_currTick );
-
-		//Logger.Info( '[T=' + a_currTick +'] NextStep completed.' );
+		this.MoveAllObjects( a_expiredTime );
+		this.ProcessAllInputs();
+		this.CollisionsDetect();
+		this.SnapshotWorld( a_currTick );
 	}
 
 	this.GetSnapshotDiff = function ( a_startTick )
@@ -221,12 +254,10 @@ var CreateWorld = function()
 		{
 			if ( id in addObjs )
 			{
-				delete deleteObjs[ id ];
+				delete delObjs[ id ];
 				delete addObjs[ id ];
-			}
-
-			if ( id in updObjs )
 				delete updObjs[ id ];
+			}
 		}
 
 		var diff = { m_addObjs : addObjs,
@@ -254,17 +285,45 @@ var CreateWorld = function()
 					   m_commands 	: [] };
 
 		this.m_world[ a_userId ]   = player;
+		this.m_players[ a_userId ] = true;
 		this.m_addObjs[ a_userId ] = player;
 	}
 
-	this.PlayerLeft = function ( a_userId )
+	this.CreateBullet = function ( a_playerId, a_pos, a_dir )
 	{
-		this.m_teams[ this.m_world[ a_userId ].m_teamId ]--
-		delete this.m_world[ a_userId ];
-		this.m_delObjs[ a_userId ] = this.m_world[ a_userId ];
+		var pos = { m_x : a_pos.m_x + a_dir.m_x * Player.BARREL_LENGTH,
+					m_y : a_pos.m_y + a_dir.m_y * Player.BARREL_LENGTH
+				  }
+
+		var vel = { m_x : a_dir.m_x * Bullet.VEL,
+					m_y : a_dir.m_y * Bullet.VEL };
+
+		var bullet = { m_id     : this.GetUniqueId(),
+					   m_type   : 'bullet',
+					   m_pos    : pos,
+					   m_vel    : vel,
+					   m_ownId  : a_playerId,
+					   m_teamId : this.m_world[ a_playerId ].m_teamId };
+
+		this.m_world[ bullet.m_id ]   = bullet;
+		this.m_bullets[ bullet.m_id ] = true;
+		this.m_addObjs[ bullet.m_id ] = bullet;
 	}
 
-	Init.call( this );
+	this.m_currObjId		= 0;
+	this.m_playersCnt		= 0;
+	this.m_world    		= {};
+	this.m_addObjs  		= {};
+	this.m_updObjs			= {};
+	this.m_delObjs			= {};
+	this.m_snapshotObjList 	= []
+	this.m_teams			= [ 0, 0 ];
+
+	this.m_walls 			= {};
+	this.m_players 			= {};
+	this.m_bullets 			= {};
+
+	this.GenerateMap();
 }
 
 module.exports.CreateWorld = CreateWorld;

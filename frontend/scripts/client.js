@@ -32,7 +32,6 @@ function OnMessage( a_msg )
             InfLog( '[RECV]: Get login: ' + a_msg.login );
             g_world.m_player.m_id = a_msg.login;
             g_client.m_start = true;
-            //setInterval( ShiftPlayer, 20 );
             ans = { type : 'login_ack' };
             break;
 
@@ -70,7 +69,7 @@ function OnKeyDown( a_event )
 
     g_client.m_downKeys[ ev.keyCode ] = true;
 
-    InfLog( '[RECV]: Key down: ' + ev.keyCode );
+    //InfLog( '[RECV]: Key down: ' + ev.keyCode );
 }
 
 function OnKeyUp( a_event )
@@ -82,20 +81,33 @@ function OnKeyUp( a_event )
 
     g_client.m_downKeys[ ev.keyCode ] = false;
 
-    InfLog( '[RECV]: Key up: ' + ev.keyCode );
+    //InfLog( '[RECV]: Key up: ' + ev.keyCode );
+}
+
+function MouseWorldPos( a_event )
+{
+    var pos = { m_x : a_event.pageX - canvas.offsetLeft,
+                m_y : canvas.height - ( a_event.pageY - canvas.offsetTop ) };
+
+    var res = { m_outOfField : false,
+                m_pos : pos };
+
+    if ( ( pos.m_x > canvas.width ) || ( pos.m_y > canvas.height ) )
+        res.m_outOfField = true;
+
+    return res;
 }
 
 function OnMouseMove( a_event )
 {
-    var mouseX = a_event.pageX - canvas.offsetLeft;
-    var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
+    var res = MouseWorldPos( a_event );
 
-    if ( ( mouseX > canvas.width ) || ( mouseY > canvas.height ) )
-        return;
+    if ( res.m_outOfField === false )
+        g_client.m_mouseLastPos = res.m_pos;
+    else
+        g_client.m_mouseLastPos = { m_x : 0, m_y : 0 };
 
-    g_mouseMove                 = true;
-    g_client.m_mouseLastPos.m_x = mouseX;
-    g_client.m_mouseLastPos.m_y = mouseY;
+    g_mouseMove = true;
 }
 
 function OnClick( a_event )
@@ -103,28 +115,22 @@ function OnClick( a_event )
     if ( !g_client.m_start )
         return;
 
-    var mouseX = a_event.pageX - canvas.offsetLeft;
-    var mouseY = canvas.height - ( a_event.pageY - canvas.offsetTop );
+    var res = MouseWorldPos( a_event );
 
-    //g_client.m_commands.push( { type : Commands.ATTACK, pos : g_world.GetPlayerPos, vec : { m_x : mouseX, m_y : mouseY } } );
+    if ( res.m_outOfField === true )
+        return;
 
-    document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + mouseX + ", " + mouseY + ")";
+    var dir = NormalizeVector( GetDirection( g_world.m_player.m_pos, res.m_pos ) );
+
+    g_client.m_commands.push( { type : Commands.ATTACK,
+                                pos  : g_world.m_player.m_pos,
+                                dir  : dir } );
+
+    document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + res.m_pos.m_x + ", " + res.m_pos.m_y + ")";
 }
 
 function ProcessUserInput()
 {
-    if ( g_mouseMove )
-    {
-        g_cursor.SetPos( g_client.m_mouseLastPos );
-
-        var newDir = NormalizeVector( GetDirection( g_world.m_player.m_pos, g_client.m_mouseLastPos ) );
-        g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
-
-        g_world.m_rtPlayer.ChangeDir( newDir );
-
-        g_mouseMove = false;
-    }
-
     document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_client.m_mouseLastPos.m_x + ", " + g_client.m_mouseLastPos.m_y + ")";
 
     if ( !g_client.m_start )
@@ -172,13 +178,24 @@ function SendUserInput()
     if ( !g_client.m_start )
         return;
 
+    if ( g_mouseMove )
+        g_cursor.SetPos( g_client.m_mouseLastPos );
+
     if ( g_shiftPlayer )
         g_client.m_commands.push( { type : Commands.MOVE, shift : g_client.m_shiftVec } );
+
+    if ( g_shiftPlayer || g_mouseMove )
+    {
+        var newDir = NormalizeVector( GetDirection( g_world.m_player.m_pos, g_client.m_mouseLastPos ) );
+        g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
+        //g_world.m_rtPlayer.ChangeDir( newDir );
+    }
 
     if ( g_client.m_commands.length > 0 )
         g_webSocket.send( JSON.stringify( { type : 'control', commands: g_client.m_commands } ) );
 
-    g_shiftPlayer = false;
+    g_mouseMove         = false;
+    g_shiftPlayer       = false;
     g_client.m_commands = [];
     g_client.m_shiftVec = { m_x : 0, m_y : 0 };
 }
@@ -253,7 +270,7 @@ function NextState()
 
     ProcessUserInput();
 
-    var testVec = g_world.InterpolateDir( { m_x : 0.0, m_y : 1.0 }, { m_x : 1.0, m_y : 0.0 }, 0.5 )
+    document.getElementById( "world_obj_cnt" ).innerHTML = "Objects cnt: " + Object.keys( g_world.m_renderWorld ).length;
 }
 
 function DrawGameField()

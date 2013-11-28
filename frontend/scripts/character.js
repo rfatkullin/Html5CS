@@ -1,18 +1,13 @@
 function Character( a_pos )
 {
-    const RADIUS        = 20.0;
-    const VELOCITY      = 5.0;
-    const BARREL_LENGTH = 30.0;
-
-
     this.m_pos    = $.extend( false, {}, a_pos );
-    this.m_figure = new Circle( a_pos, RADIUS );
+    this.m_figure = new Circle( a_pos, Player.RAD );
     this.m_figColor  = [ 0.0, 1.0, 0.0, 0.3 ];
     this.m_barrColor = [ 0.0, 0.0, 0.0, 1.0 ];
 
     this.m_barrel = new Line( { m_x : a_pos.m_x,                 m_y : a_pos.m_y },
-                              { m_x : a_pos.m_x + BARREL_LENGTH, m_y : a_pos.m_y },
-                              BARREL_LENGTH );
+                              { m_x : a_pos.m_x + Player.BARREL_LENGTH, m_y : a_pos.m_y },
+                              Player.BARREL_LENGTH );
 
     this.SetPos = function( a_pos )
     {

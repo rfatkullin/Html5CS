@@ -6,7 +6,7 @@ function Vector( a_posX, a_posY )
 
 function Circle( a_pos, a_radius )
 {
-    var GenerateCirclePoints = function ()
+    this.GenerateCirclePoints = function ( a_pos, a_radius )
     {
         const VERTS_CNT     = 50;
         var angle           = 0.0;
@@ -23,12 +23,6 @@ function Circle( a_pos, a_radius )
         }
 
         this.m_size  = VERTS_CNT + 1;
-    }
-
-    var Init = function ()
-    {
-        GenerateCirclePoints.call( this );
-        this.m_vertBuff = gl.createBuffer();
     }
 
     this.ShiftOn = function ( a_pos )
@@ -77,12 +71,13 @@ function Circle( a_pos, a_radius )
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
 
-    Init.call( this );
+    this.GenerateCirclePoints(  a_pos, a_radius );
+    this.m_vertBuff = gl.createBuffer();
 }
 
 function Rectangle( a_pos, a_width, a_height )
 {
-    var GenerateRectanglePoints = function()
+    this.GenerateRectanglePoints = function()
     {
         this.m_verts = [ a_pos.m_x - a_width / 2.0, a_pos.m_y + a_height / 2.0,
                          a_pos.m_x + a_width / 2.0, a_pos.m_y + a_height / 2.0,
@@ -91,12 +86,6 @@ function Rectangle( a_pos, a_width, a_height )
 
         this.m_size = 4;
         this.m_pos  = $.extend( false, {}, a_pos );
-    }
-
-    var Init = function ()
-    {
-        GenerateRectanglePoints.call( this );
-        this.m_vertBuff = gl.createBuffer();
     }
 
     this.ShiftOn = function ( a_pos )
@@ -122,8 +111,9 @@ function Rectangle( a_pos, a_width, a_height )
         this.m_pos = $.extend( false, {}, a_pos );
     }
 
-    this.Draw = function()
+    this.Draw = function( a_color )
     {
+        gl.uniform4fv( g_graphics.m_shaderProgram.m_colorUniform, a_color );
         gl.bindBuffer( gl.ARRAY_BUFFER, this.m_vertBuff );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( this.m_verts ), gl.STATIC_DRAW );
         gl.enableVertexAttribArray( g_graphics.m_shaderProgram.m_positionAttribute );
@@ -131,9 +121,10 @@ function Rectangle( a_pos, a_width, a_height )
         gl.drawArrays( gl.TRIANGLE_FAN, 0, this.m_size );
     }
 
-    Init.call( this );
-}
+    this.GenerateRectanglePoints();
+    this.m_vertBuff = gl.createBuffer();
 
+}
 
 function Line( a_begin, a_end, a_length )
 {
@@ -198,7 +189,7 @@ function NormalizeVector( a_vec )
     var normVec = $.extend( false, {}, a_vec );
     var len = Math.sqrt( normVec.m_x * normVec.m_x + normVec.m_y * normVec.m_y );
 
-    if ( !( len < EPSILON ) )
+    if ( !( len < Geometry.EPSILON ) )
     {
         normVec.m_x /= len;
         normVec.m_y /= len;
@@ -216,5 +207,3 @@ function GetDirection( a_p1, a_p2 )
 
     return dirVec;
 }
-
-EPSILON = 0.000000001;

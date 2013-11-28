@@ -44,7 +44,10 @@ function MessageProcess( a_msg )
 
 function OnClose()
 {
-	g_world.PlayerLeft( this.m_userId );
+	var delList = {};
+	delList[ this.m_userId ] = true;
+	g_world.DeleteObjects( delList );
+
 	delete g_server.m_conns[ this.m_userId ];
 
 	--g_server.m_usersCnt;
@@ -105,7 +108,7 @@ function SendSnapshots()
 
 		var sendSnapshot = g_world.GetSnapshotDiff( conn.m_lastAckSnapshot );
 
-		Logger.Info( 'Snapshot: ' + JSON.stringify( sendSnapshot ) );
+		//Logger.Info( 'Snapshot: ' + JSON.stringify( sendSnapshot ) );
 
 		conn.send( JSON.stringify( { type	: 'update',
 									 tick 	: g_server.m_tick,
@@ -119,7 +122,7 @@ function SendSnapshots()
 
 function TickHandler()
 {
-	g_world.NextStep( TICKS_INTERVAL, g_server.m_tick );
+	g_world.NextStep( TICKS_INTERVAL / MSECS_INSEC, g_server.m_tick );
 
 	SendSnapshots();
 
@@ -128,8 +131,9 @@ function TickHandler()
 
 function main()
 {
-	//var TICKS_INTERVAL 	= 20; // milliseconds
-	TICKS_INTERVAL 		= 30; // 1 sec.
+	TICKS_INTERVAL 	= 30; // 30 msec.
+	MSECS_INSEC		= 1000;
+
 
 	g_world  = new GameModule.CreateWorld();
 	g_server = new GameServerWrapper();
@@ -138,4 +142,3 @@ function main()
 }
 
 main();
-

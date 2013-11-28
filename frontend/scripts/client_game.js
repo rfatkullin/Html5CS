@@ -3,7 +3,7 @@ function World()
 	var ownPlayerColor  	= [ 0.0, 1.0, 0.0, 0.3 ];
 	var ourCommandColor 	= [ 0.0, 0.0, 1.0, 0.3 ];
 	var opponenCommandColor = [ 1.0, 0.0, 0.0, 0.3 ];
-	var wallColor			= [ 0.5, 0.5, 0.5, 1.0 ];
+	var wallColor			= [ 0.5, 0.0, 1.0, 1.0 ];
 	var bulletColor			= [ 0.0, 0.0, 0.0, 1.0 ];
 	var rtPlayerColor		= [ 0.0, 0.0, 0.0, 1.0 ];
 
@@ -14,12 +14,11 @@ function World()
 
 		this.m_snapshotObjList 	= [];
 	    this.m_state 			= { start : false, login : undefined };
-	    //TO FIX: m_plyaer must be easier
 	    this.m_player			= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_rtPlayer			= new Character( { m_x : 100.0, m_y : 100.0 } );
-	    this.m_player.m_figure.SetRadius( 30 )
 	    this.m_recvPlayer		= false;
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
+	    this.m_bulletDrawer		= new Circle( { m_x : 100, m_y : 100 }, Bullet.RAD );
 	}
 
 	this.DrawObjects = function ()
@@ -35,17 +34,15 @@ function World()
 			switch ( currObj.m_type )
 			{
 				case 'player' :
-
 					this.DrawCommonPlayer( currObj );
 					break;
 
 				case 'wall' :
-
 					this.DrawWall( currObj.m_pos );
 					break;
 
 				case 'bullet' :
-					currObj.Draw( bulletColor );
+					this.DrawBullet( currObj.m_pos );
 					break;
 
 				default:
@@ -84,6 +81,12 @@ function World()
 		// this.m_rtPlayer.SetPos( a_player.m_pos );
 		// this.m_rtPlayer.ChangeDir( a_player.m_dir );
 		// this.m_rtPlayer.Draw( rtPlayerColor );
+	}
+
+	this.DrawBullet = function ( a_pos )
+	{
+		this.m_bulletDrawer.SetPos( a_pos );
+		this.m_bulletDrawer.Draw( bulletColor );
 	}
 
 	this.DrawWall = function ( a_pos )
@@ -155,7 +158,7 @@ function World()
 		var rightRotate = false;
 		var pseudoScalar = a_startDir.m_x * a_endDir.m_y - a_startDir.m_y * a_endDir.m_x;
 
-		if ( pseudoScalar < EPSILON )
+		if ( pseudoScalar < Geometry.EPSILON )
 			rightRotate = true;
 
 		var angle = Math.acos( a_startDir.m_x * a_endDir.m_x + a_startDir.m_y * a_endDir.m_y );
@@ -180,6 +183,16 @@ function World()
 
 		this.m_renderWorld = jQuery.extend( true, {}, leftSnapShotObj.m_snapshot );
 
+		//Deleting objects from left bound
+		for ( var delId, i = 0; i < leftSnapShotObj.m_deleted.length; ++i )
+		{
+			delId = leftSnapShotObj.m_deleted[ i ];
+
+			//InfLog( 'Delete object : id = ' + delId + ' type = ' + this.m_renderWorld[ delId ].m_type + ' Pos : ' + JSON.stringify( this.m_renderWorld[ delId ] ) +  '.' );
+
+			delete this.m_renderWorld[ delId ];
+		}
+
 		for ( var upId, i = 0; i < rightSnapShotObj.m_updated.length; ++i )
 		{
 			upId = rightSnapShotObj.m_updated[ i ];
@@ -188,11 +201,14 @@ function World()
 																	rightSnapShotObj.m_snapshot[ upId ].m_pos,
 																	factor );
 
-			this.m_renderWorld[ upId ].m_dir = this.InterpolateDir( leftSnapShotObj.m_snapshot[ upId ].m_dir,
-			 	   				 			   						rightSnapShotObj.m_snapshot[ upId ].m_dir,
-			 	 				 			   						factor );
+			if ( this.m_renderWorld[ upId ].m_type === 'player' )
+			{
+				this.m_renderWorld[ upId ].m_dir = this.InterpolateDir( leftSnapShotObj.m_snapshot[ upId ].m_dir,
+			 	   				 			   							rightSnapShotObj.m_snapshot[ upId ].m_dir,
+			 	 				 			   							factor );
+			}
 
-			InfLog( 'Update object : id = ' + upId + ' type = ' + this.m_renderWorld[ upId ].m_type + ' Pos : ' + JSON.stringify( this.m_renderWorld[ upId ] ) +  '.' );
+			//InfLog( 'Update object : id = ' + upId + ' type = ' + this.m_renderWorld[ upId ].m_type + ' Pos : ' + JSON.stringify( this.m_renderWorld[ upId ] ) +  '.' );
 		}
 	}
 
@@ -205,7 +221,8 @@ function World()
 			this.m_snapshotObjList.push( { 	m_tick      : a_updObj.m_tick,
 									   		m_timeStamp : a_timeStamp,
 									   		m_snapshot  : a_updObj.world.snapshot,
-									   		m_updated	: {} } );
+									   		m_updated	: {},
+									   		m_deleted	: {} } );
 
 			InfLog( 'New world : ' + JSON.stringify( a_updObj.world.snapshot ) );
 
@@ -214,12 +231,15 @@ function World()
 
 		var diffObj = a_updObj.world.diff;
 
-		var lastSnapshot = this.m_snapshotObjList[ this.m_snapshotObjList.length - 1 ].m_snapshot;
+		var lastSnapshotObj = this.m_snapshotObjList[ this.m_snapshotObjList.length - 1 ];
 
-		var newSnapshot = $.extend( true, {}, lastSnapshot );
+		var newSnapshot = $.extend( true, {}, lastSnapshotObj.m_snapshot );
 
-		for ( var delId in diffObj.m_delObjs )
+		for ( var delId, i = 0; i < lastSnapshotObj.m_deleted.length; ++i )
+		{
+			delId = lastSnapshotObj.m_deleted[ i ];
 			delete newSnapshot[ delId ];
+		}
 
 		for ( var upId in diffObj.m_updObjs )
 			newSnapshot[ upId ] = diffObj.m_updObjs[ upId ];
@@ -233,7 +253,8 @@ function World()
 		this.m_snapshotObjList.push( { m_tick      : a_updObj.tick,
 									   m_timeStamp : a_timeStamp,
 									   m_snapshot  : newSnapshot,
-									   m_updated   : Object.keys( diffObj.m_updObjs ) } );
+									   m_updated   : Object.keys( diffObj.m_updObjs ),
+									   m_deleted   : Object.keys( diffObj.m_delObjs ) } );
 
 		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
