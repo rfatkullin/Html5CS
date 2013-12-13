@@ -14,11 +14,26 @@ function World()
 
 		this.m_snapshotObjList 	= [];
 	    this.m_state 			= { start : false, login : undefined };
-	    this.m_player			= new Character( { m_x : 100.0, m_y : 100.0 } );
-	    this.m_rtPlayer			= new Character( { m_x : 100.0, m_y : 100.0 } );
-	    this.m_recvPlayer		= false;
+	    this.m_playerId			= -1;
+	    this.m_playerTeamId		= -1;
+	    this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
 	    this.m_bulletDrawer		= new Circle( { m_x : 100, m_y : 100 }, Bullet.RAD );
+	}
+
+	this.SetPlayerId = function ( a_id )
+	{
+		this.m_playerId = a_id;
+	}
+
+	this.SetPlayerTeamId = function( a_teamId )
+	{
+		this.m_playerTeamId = teamId;
+	}
+
+	this.GetPlayerPos = function ()
+	{
+		return this.m_renderWorld[ this.m_playerId ].m_pos;
 	}
 
 	this.DrawObjects = function ()
@@ -53,17 +68,8 @@ function World()
 
 	this.DrawCommonPlayer = function ( a_player )
 	{
-		if ( a_player.m_id === this.m_player.m_id )
-		{
-			if ( !this.m_recvPlayer )
-			{
-				this.m_recvPlayer = true;
-				this.m_player.SetPos( a_player.m_pos );
-				this.m_rtPlayer.SetPos( a_player.m_pos );
-			}
-
+		if ( a_player.m_id === this.m_playerId )
 			this.DrawPlayer( a_player, ownPlayerColor );
-		}
 		else if ( a_player.m_teamId === this.m_player.m_teamId )
 			this.DrawPlayer( a_player, ourCommandColor );
 		else
@@ -72,15 +78,9 @@ function World()
 
 	this.DrawPlayer = function ( a_player, a_color )
 	{
-		this.m_player.SetPos( a_player.m_pos );
-		this.m_player.ChangeDir( a_player.m_dir );
-		this.m_player.Draw( a_color );
-
-		//InfLog( 'Player obj :' + JSON.stringify( a_player ) +  '.' );
-
-		// this.m_rtPlayer.SetPos( a_player.m_pos );
-		// this.m_rtPlayer.ChangeDir( a_player.m_dir );
-		// this.m_rtPlayer.Draw( rtPlayerColor );
+		this.m_playerDrawer.SetPos( a_player.m_pos );
+		this.m_playerDrawer.ChangeDir( a_player.m_dir );
+		this.m_playerDrawer.Draw( a_color );
 	}
 
 	this.DrawBullet = function ( a_pos )
@@ -256,7 +256,7 @@ function World()
 									   m_updated   : Object.keys( diffObj.m_updObjs ),
 									   m_deleted   : Object.keys( diffObj.m_delObjs ) } );
 
-		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
+		InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
 	Init.call( this );

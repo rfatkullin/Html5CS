@@ -16,7 +16,10 @@ function OnClose()
 function OnError( a_error )
 {
     if ( a_error.data === undefined )
-        ErrLog( 'Cann\'t connect to server.' );
+    {
+        ErrLog( 'Cannot connect to server.' );
+        alert( 'Cannot connect to server.' );
+    }
     else
         ErrLog( a_error.data );
 }
@@ -30,7 +33,7 @@ function OnMessage( a_msg )
     {
         case 'login' :
             InfLog( '[RECV]: Get login: ' + a_msg.login );
-            g_world.m_player.m_id = a_msg.login;
+            g_world.SetPlayerId( a_msg.login );
             g_client.m_start = true;
             ans = { type : 'login_ack' };
             break;
@@ -120,10 +123,10 @@ function OnClick( a_event )
     if ( res.m_outOfField === true )
         return;
 
-    var dir = NormalizeVector( GetDirection( g_world.m_player.m_pos, res.m_pos ) );
+    var dir = NormalizeVector( GetDirection( g_world.GetPlayerPos(), res.m_pos ) );
 
     g_client.m_commands.push( { type : Commands.ATTACK,
-                                pos  : g_world.m_player.m_pos,
+                                pos  : g_world.GetPlayerPos(),
                                 dir  : dir } );
 
     document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + res.m_pos.m_x + ", " + res.m_pos.m_y + ")";
@@ -169,8 +172,6 @@ function ProcessUserInput()
         --shiftRTPlayer.m_y;
         g_shiftPlayer = true;
     }
-
-    g_world.m_rtPlayer.ShiftOn( shiftRTPlayer );
 }
 
 function SendUserInput()
@@ -186,9 +187,8 @@ function SendUserInput()
 
     if ( g_shiftPlayer || g_mouseMove )
     {
-        var newDir = NormalizeVector( GetDirection( g_world.m_player.m_pos, g_client.m_mouseLastPos ) );
+        var newDir = NormalizeVector( GetDirection( g_world.GetPlayerPos(), g_client.m_mouseLastPos ) );
         g_client.m_commands.push( { type : Commands.CHANGE_DIR, dir : newDir } );
-        //g_world.m_rtPlayer.ChangeDir( newDir );
     }
 
     if ( g_client.m_commands.length > 0 )
@@ -246,8 +246,13 @@ function OnLoad()
     setInterval( SendUserInput, 50 );
 }
 
-function StartGame()
+function Connect( a_button )
 {
+    if ( a_button.value === 'Connect' )
+        a_button.value = 'Reconnect';
+    else
+        g_webSocket.close();
+
     g_webSocket = new WebSocket( 'ws://localhost:1024' );
 
     if ( g_webSocket === undefined )

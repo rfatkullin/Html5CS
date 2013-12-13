@@ -41,50 +41,46 @@ var CreateWorld = function()
 
 	this.ProcessUserInput = function( a_userId, a_controlObj )
 	{
-		Logger.Info( '[CL=' + a_userId + ']: Cmd: ' + JSON.stringify( a_controlObj ));
-
-		this.m_world[ a_userId ].m_commands = this.m_world[ a_userId ].m_commands.concat( a_controlObj );
+		this.m_playerCommands[ a_userId ] = this.m_playerCommands[ a_userId ].concat( a_controlObj );
 	}
 
 	this.ProcessAllInputs = function()
 	{
-		for ( var objId in this.m_world )
+		for ( var id in this.m_playerCommands )
 		{
-			if ( this.m_world[ objId ].m_type != 'player' )
-				continue;
-
-			var player = this.m_world[ objId ];
-
-			if ( player.m_commands.length != 0 )
+			if ( this.m_playerCommands[ id ].length != 0 )
 			{
-				for ( var i = 0; i < player.m_commands.length; ++i )
+				for ( var i = 0; i < this.m_playerCommands[ id ].length; ++i )
 				{
-					switch ( player.m_commands[ i ].type )
+					var command = this.m_playerCommands[ id ][ i ];
+
+					switch ( command.type )
 					{
 						case Commands.ATTACK :
 
-							this.CreateBullet( objId, player.m_commands[ i ].pos, player.m_commands[ i ].dir );
+							this.ProcessAttack( id, command.pos, command.dir );
 							break;
 
 						case Commands.MOVE :
 
-							this.MovePlayer( objId, player.m_commands[ i ].shift );
+							this.MovePlayer( id, command.shift );
 							break;
 
 						case Commands.CHANGE_DIR :
 
-							this.PlayerChangeDir( objId, player.m_commands[ i ].dir );
+							this.PlayerChangeDir( id, command.dir );
 							break;
 
 						default :
 
-							Logger.Error( '[CL= ' + objId + ' ]: Non-existent command: ' + player.m_commands[ i ].type + '.' );
+							Logger.Error( '[CL= ' + id + ' ]: Non-existent command: ' + command.type + '.' );
+							Logger.Error( JSON.stringify( command ) );
 							break;
 					}
 				}
 			}
 
-			player.m_commands = [];
+			this.m_playerCommands[ id ] = [];
 		}
 	}
 
@@ -146,8 +142,7 @@ var CreateWorld = function()
 			switch ( this.m_world[ id ].m_type )
 			{
 				case 'player' :
-					this.m_teams[ this.m_world[ a_userId ].m_teamId ]--
-					delete this.m_players[ id ];
+					DeletePlayer( id );
 					break;
 
 				case 'bullet' :
@@ -164,34 +159,31 @@ var CreateWorld = function()
 
 			this.m_delObjs[ id ] = this.m_world[ id ];
 			delete this.m_world[ id ];
-			delete a_idList[ id ];
 		}
 	}
 
-	this.CollisionsDetect = function()
+	this.CollisionDetect = function()
 	{
-		var forDelete = {};
-
-		for ( var bulletId in this.m_bullets )
+		for ( var playerId in this.m_players )
 		{
+			var player = this.m_world[ playerId ];
+
 			for ( var wallId in this.m_walls )
 			{
-				if ( Geometry.PointInRect( this.m_world[ bulletId ].m_pos, this.m_walls[ wallId ] ) === true )
-					forDelete[ bulletId ] = true;
-			}
+				var wall = this.m_walls[ wallId ];
 
-			for ( var playerId in this.m_players )
-			{
-				if ( ( this.m_world[ bulletId ].m_teamId !== this.m_world[ playerId ].m_teamId ) &&
-					 ( Geometry.PointInCircle( this.m_world[ bulletId ].m_pos, this.m_walls[ m_players ],m_pos, Player.RAD ) === true ))
+				var res = Geometry.RecAndCircleIntersect( wall, player.m_pos, Player.RAD );
+
+				if ( res.m_isIntersect )
 				{
-					forDelete[ bulletId ] = true;
-					forDelete[ playerId ] = true;
+					var dist 		= Geometry.DistTo( player.m_pos, res.m_interPoint );
+					var dir  		= Geometry.GetDir( player.m_pos, res.m_interPoint );
+					var reverseDir 	= { m_x : -dir.m_x, m_y : -dir.m_y };
+
+					m_pos = Geometry.ShiftByDir( m_pos, reverseDir, dist );
 				}
 			}
 		}
-
-		this.DeleteObjects( forDelete );
 	}
 
 	this.SnapshotWorld = function ( a_currTick )
@@ -280,13 +272,59 @@ var CreateWorld = function()
 		var player = { m_id     	: a_userId,
 					   m_type   	: 'player',
 					   m_teamId 	: teamId,
+					   m_health		: Player.INIT_HEALTH,
 					   m_pos 		: pos,
-					   m_dir  		: dir,
-					   m_commands 	: [] };
+					   m_dir  		: dir };
 
-		this.m_world[ a_userId ]   = player;
-		this.m_players[ a_userId ] = true;
-		this.m_addObjs[ a_userId ] = player;
+		this.m_playerCommands[ a_userId ] 	= [];
+		this.m_world[ a_userId ]   			= player;
+		this.m_players[ a_userId ] 			= true;
+		this.m_addObjs[ a_userId ] 			= player;
+	}
+
+	this.DeletePlayer = function( a_id )
+	{
+		this.m_teams[ this.m_world[ a_id ].m_teamId ]--
+		delete this.m_playerCommands[ a_userId ];
+		delete this.m_players[ a_id ];
+	}
+
+	this.ProcessAttack = function ( a_playerId, a_pos, a_dir )
+	{
+		var player 		= m_world[ a_playerId ];
+		var interObjs	= [];
+		var res 		= { m_intersect : false };
+
+		for ( var id in this.m_world )
+		{
+			if ( id === a_playerId )
+				continue;
+
+			if ( ( this.m_world[ id ].m_type === 'player' ) && ( this.m_world[ id ].m_teamId === player.m_teamId ) )
+				continue;
+
+			if ( this.m_world[ id ].m_type === 'player' )
+				res = Geometry.RayCircleIntersect( a_pos, a_dir, a_pos, a_rad );
+
+			if ( this.m_world[ id ].m_type === 'wall' )
+				res =  Geometry.RayRecIntersect( a_pos, a_dir, this.m_walls[ id ] );
+
+			if ( res.m_intersect )
+			{
+				var dist = Geometry.DistTo( m_pos, res.m_point );
+				interObjs.push( { m_id : id, m_dist : dist } );
+			}
+		}
+
+		interObjs.sort( function( a_a, a_b )
+						{
+							return ( a_a.m_dist + Geometry.EPS < a_b.m_dist ? -1 : 1 );
+						} );
+
+		var interObj = interObjs[ 0 ];
+
+		if ( this.m_world[ interObj.m_id ].m_type === 'player' )
+			--this.m_world[ interObj.m_id ].m_health;
 	}
 
 	this.CreateBullet = function ( a_playerId, a_pos, a_dir )
@@ -312,6 +350,7 @@ var CreateWorld = function()
 
 	this.m_currObjId		= 0;
 	this.m_playersCnt		= 0;
+	this.m_playerCommands	= {};
 	this.m_world    		= {};
 	this.m_addObjs  		= {};
 	this.m_updObjs			= {};

@@ -17,7 +17,7 @@ function MessageProcess( a_msg )
 	{
 		case 'login_get' :
 			Logger.Info( 'Client trying to connect. Sent login: ' + this.m_userId );
-			this.send( JSON.stringify( { type : 'login', login : this.m_userId } ) );
+			this.send( JSON.stringify( { type : 'login', login : this.m_userId, teamId : this.m_teamId } ) );
 			break;
 
 		case 'login_ack' :
@@ -27,12 +27,12 @@ function MessageProcess( a_msg )
 			break;
 
 		case 'control' :
-			Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received control.' );
+			//Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received control.' );
 			g_world.ProcessUserInput( this.m_userId, a_msg.commands );
 			break;
 
 		case 'update_ack' :
-			Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received update ack ' + a_msg.tick );
+			//Logger.Info( '[CL=' + this.m_userId + ']:' + ' Received update ack ' + a_msg.tick );
 			this.m_lastAckSnapshot = a_msg.tick;
 			break;
 

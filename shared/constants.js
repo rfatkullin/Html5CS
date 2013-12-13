@@ -5,9 +5,10 @@
 			  	HEIGHT : 50
 			 };
 
-	Player = { 	VEL : 5,
-				RAD : 15,
-    			BARREL_LENGTH : 20.0
+	Player = { 	VEL 			: 5,
+				RAD 			: 15,
+				INIT_HEALTH		: 100;
+    			BARREL_LENGTH 	: 20.0
     		 };
 
 	Bullet = { 	VEL : 100,
