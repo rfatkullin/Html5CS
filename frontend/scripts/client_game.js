@@ -4,7 +4,6 @@ function World()
 	var ourCommandColor 	= [ 0.0, 0.0, 1.0, 0.3 ];
 	var opponenCommandColor = [ 1.0, 0.0, 0.0, 0.3 ];
 	var wallColor			= [ 0.5, 0.0, 1.0, 1.0 ];
-	var bulletColor			= [ 0.0, 0.0, 0.0, 1.0 ];
 	var rtPlayerColor		= [ 0.0, 0.0, 0.0, 1.0 ];
 
 	var Init = function ()
@@ -18,7 +17,6 @@ function World()
 	    this.m_playerTeamId		= -1;
 	    this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
-	    this.m_bulletDrawer		= new Circle( { m_x : 100, m_y : 100 }, Bullet.RAD );
 	}
 
 	this.SetPlayerId = function ( a_id )
@@ -56,10 +54,6 @@ function World()
 					this.DrawWall( currObj.m_pos );
 					break;
 
-				case 'bullet' :
-					this.DrawBullet( currObj.m_pos );
-					break;
-
 				default:
 					break;
 			}
@@ -70,7 +64,7 @@ function World()
 	{
 		if ( a_player.m_id === this.m_playerId )
 			this.DrawPlayer( a_player, ownPlayerColor );
-		else if ( a_player.m_teamId === this.m_player.m_teamId )
+		else if ( a_player.m_teamId === this.m_playerTeamId )
 			this.DrawPlayer( a_player, ourCommandColor );
 		else
 			this.DrawPlayer( a_player, opponenCommandColor );
@@ -81,12 +75,6 @@ function World()
 		this.m_playerDrawer.SetPos( a_player.m_pos );
 		this.m_playerDrawer.ChangeDir( a_player.m_dir );
 		this.m_playerDrawer.Draw( a_color );
-	}
-
-	this.DrawBullet = function ( a_pos )
-	{
-		this.m_bulletDrawer.SetPos( a_pos );
-		this.m_bulletDrawer.Draw( bulletColor );
 	}
 
 	this.DrawWall = function ( a_pos )

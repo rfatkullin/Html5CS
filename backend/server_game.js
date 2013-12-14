@@ -95,11 +95,48 @@ var CreateWorld = function()
 
 	this.MovePlayer = function( a_playerInd, a_shift )
 	{
-		var player = this.m_world[ a_playerInd ];
+		var player 	= this.m_world[ a_playerInd ];
+		var maxIter = Collide.ITER_CNT;
 
-		player.m_pos.m_x += Player.VEL * a_shift.m_x;
-		player.m_pos.m_y += Player.VEL * a_shift.m_y;
+		for ( var wallId in this.m_walls )
+		{
+			var wall 			= this.m_walls[ wallId ];
+			var res  			= {};
+			var iter 			= Collide.ITER_CNT + 1;
+			var intersPointCnt 	= 0;
+			do
+			{
+				--iter;
+				intersPointCnt 	= 0;
+				var factor = iter / Collide.ITER_CNT;
+				var newPos = { m_x : player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+					   		   m_y : player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 
+				res =  Geometry.CircleRecIntersect( newPos, Player.RAD, wall );
+
+				if ( res.m_intersect )
+				{
+					Logger.Info( 'Wall : ' + wallId + '. Intersection detected. Iter : ' + iter + '. Points count : ' + res.m_pointsCnt );
+					intersPointCnt = res.m_pointsCnt;
+				}
+			}
+			while ( ( res.m_intersect !== false ) && ( intersPointCnt > 1 ) && ( iter > 1 ) )
+
+			if ( iter <= 1 )
+			{
+				//Одна стена мешает перемещению - игрок остается на месте
+				return;
+			}
+			else
+			{
+				//Собираем все "допустимые перемещения", из которых потом выберем наименьшее - случай, когда игрок находится вбилизи двух стен
+				maxIter = Math.min( maxIter, iter );
+			}
+		}
+
+		var factor 	 = maxIter / Collide.ITER_CNT;
+		player.m_pos = { m_x : player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+					     m_y : player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 		this.m_updObjs[ a_playerInd ] = player;
 	}
 
@@ -142,7 +179,7 @@ var CreateWorld = function()
 			switch ( this.m_world[ id ].m_type )
 			{
 				case 'player' :
-					DeletePlayer( id );
+					this.DeletePlayer( id );
 					break;
 
 				case 'bullet' :
@@ -159,30 +196,6 @@ var CreateWorld = function()
 
 			this.m_delObjs[ id ] = this.m_world[ id ];
 			delete this.m_world[ id ];
-		}
-	}
-
-	this.CollisionDetect = function()
-	{
-		for ( var playerId in this.m_players )
-		{
-			var player = this.m_world[ playerId ];
-
-			for ( var wallId in this.m_walls )
-			{
-				var wall = this.m_walls[ wallId ];
-
-				var res = Geometry.RecAndCircleIntersect( wall, player.m_pos, Player.RAD );
-
-				if ( res.m_isIntersect )
-				{
-					var dist 		= Geometry.DistTo( player.m_pos, res.m_interPoint );
-					var dir  		= Geometry.GetDir( player.m_pos, res.m_interPoint );
-					var reverseDir 	= { m_x : -dir.m_x, m_y : -dir.m_y };
-
-					m_pos = Geometry.ShiftByDir( m_pos, reverseDir, dist );
-				}
-			}
 		}
 	}
 
@@ -209,7 +222,6 @@ var CreateWorld = function()
 	{
 		this.MoveAllObjects( a_expiredTime );
 		this.ProcessAllInputs();
-		this.CollisionsDetect();
 		this.SnapshotWorld( a_currTick );
 	}
 
@@ -282,16 +294,16 @@ var CreateWorld = function()
 		this.m_addObjs[ a_userId ] 			= player;
 	}
 
-	this.DeletePlayer = function( a_id )
+	this.DeletePlayer = function( a_playerId )
 	{
-		this.m_teams[ this.m_world[ a_id ].m_teamId ]--
-		delete this.m_playerCommands[ a_userId ];
-		delete this.m_players[ a_id ];
+		this.m_teams[ this.m_world[ a_playerId ].m_teamId ]--
+		delete this.m_playerCommands[ a_playerId ];
+		delete this.m_players[ a_playerId ];
 	}
 
 	this.ProcessAttack = function ( a_playerId, a_pos, a_dir )
 	{
-		var player 		= m_world[ a_playerId ];
+		var player 		= this.m_world[ a_playerId ];
 		var interObjs	= [];
 		var res 		= { m_intersect : false };
 
@@ -300,14 +312,23 @@ var CreateWorld = function()
 			if ( id === a_playerId )
 				continue;
 
-			if ( ( this.m_world[ id ].m_type === 'player' ) && ( this.m_world[ id ].m_teamId === player.m_teamId ) )
-				continue;
+			res.m_intersect = false;
 
-			if ( this.m_world[ id ].m_type === 'player' )
-				res = Geometry.RayCircleIntersect( a_pos, a_dir, a_pos, a_rad );
+			switch ( this.m_world[ id ].m_type )
+			{
+				case 'player' :
+					if ( this.m_world[ id ].m_teamId === player.m_teamId )
+						continue;
+					res = Geometry.RayCircleIntersect( a_pos, a_dir, this.m_world[ id ].m_pos, Player.RAD );
+					break;
 
-			if ( this.m_world[ id ].m_type === 'wall' )
-				res =  Geometry.RayRecIntersect( a_pos, a_dir, this.m_walls[ id ] );
+				case 'wall' :
+					res =  Geometry.RayRecIntersect( a_pos, a_dir, this.m_walls[ id ] );
+					break;
+
+				default :
+					break;
+			}
 
 			if ( res.m_intersect )
 			{
@@ -316,15 +337,21 @@ var CreateWorld = function()
 			}
 		}
 
-		interObjs.sort( function( a_a, a_b )
-						{
-							return ( a_a.m_dist + Geometry.EPS < a_b.m_dist ? -1 : 1 );
-						} );
+		if ( interObjs.length > 0 )
+		{
+			for ( var i = 0; i < interObjs.length; ++i )
+				Logger.Info( 'Intersection detected with: ' + interObjs[ i ].m_id );
 
-		var interObj = interObjs[ 0 ];
+			interObjs.sort( function( a_a, a_b )
+							{
+								return ( a_a.m_dist + Geometry.EPS < a_b.m_dist ? -1 : 1 );
+							} );
 
-		if ( this.m_world[ interObj.m_id ].m_type === 'player' )
-			--this.m_world[ interObj.m_id ].m_health;
+			var interObj = interObjs[ 0 ];
+
+			if ( this.m_world[ interObj.m_id ].m_type === 'player' )
+				--this.m_world[ interObj.m_id ].m_health;
+		}
 	}
 
 	this.CreateBullet = function ( a_playerId, a_pos, a_dir )
@@ -347,6 +374,22 @@ var CreateWorld = function()
 		this.m_bullets[ bullet.m_id ] = true;
 		this.m_addObjs[ bullet.m_id ] = bullet;
 	}
+
+	//Debug
+	this.TestIntersections = function ()
+	{
+		var wall = new Geometry.Rectangle( { m_x : 3.0, m_y : 1.0 }, 2.0, 2.0 );
+		// var res =  Geometry.RayRecIntersect( { m_x : 0.0, m_y : 1.0 }, { m_x : 3.0, m_y : 1.0 }, wall );
+
+		//res =  Geometry.RayCircleIntersect( { m_x : 5.0, m_y : 1.0 }, { m_x : 0.0, m_y : 1.0 }, { m_x : 5.0, m_y : 7.0 }, 3.0 );
+
+		var res = Geometry.CircleRecIntersect( { m_x : 1.0, m_y : 1.0 }, 1.0, wall  )
+
+
+		if ( res.m_intersect )
+			Logger.Info( 'Intersection : ' + JSON.stringify( res ) );
+	}
+	//Debug
 
 	this.m_currObjId		= 0;
 	this.m_playersCnt		= 0;

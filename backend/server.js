@@ -136,9 +136,11 @@ function main()
 
 
 	g_world  = new GameModule.CreateWorld();
-	g_server = new GameServerWrapper();
+	// g_server = new GameServerWrapper();
 
-	setInterval( TickHandler, TICKS_INTERVAL );
+	// setInterval( TickHandler, TICKS_INTERVAL );
+
+	g_world.TestIntersections();
 }
 
 main();
