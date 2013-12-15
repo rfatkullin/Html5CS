@@ -178,13 +178,16 @@ Geometry =
 
         var discr = b * b - 4 * a * c;
 
-        if ( discr < Constants.EPSILON )
+        if ( discr < -Constants.EPSILON )
             return false;
 
         discr = Math.sqrt( discr );
 
         var params = [ ( -b - discr ) / ( 2 * a ),
                        ( -b + discr ) / ( 2 * a ) ];
+
+        if ( Math.abs( params[ 0 ] - params[ 1 ] ) < Constants.EPSILON )        
+            params = [ params[ 0 ] ];
 
         var ans = [];
         for ( var i = 0; i < params.length; ++i )
@@ -219,7 +222,7 @@ Geometry =
         for ( var i = 0; i < intersPoints.length; ++i )
         {
             if ( this.InSegment( 0.0, 1.0, intersPoints[ i ].m_param ) )
-                ans.push( intersPoints[ i ] );
+                ans.push( intersPoints[ i ].m_pos );
         }
 
         return ans;
@@ -227,6 +230,9 @@ Geometry =
 
     CircleRecIntersect : function ( a_center, a_rad, a_rec )
     {
+        var res = { m_intersect : false,
+                    m_points    : [],
+                    m_pointsCnt : 0 };
         var elCnt = 2 * a_rec.m_size;
 
         for ( var i = 0; i < elCnt; i += 2 )
@@ -239,14 +245,16 @@ Geometry =
             segDir   = { m_x : a_rec.m_verts[ nextInd ]     - a_rec.m_verts[ i ],
                          m_y : a_rec.m_verts[ nextInd + 1 ] - a_rec.m_verts[ i + 1 ] };
 
-            var res = this.SegCircleIntersect( segBegin, segDir, a_center, a_rad );
+            var currRes = this.SegCircleIntersect( segBegin, segDir, a_center, a_rad );
             if ( res.length != 0 )
             {
-                return { m_intersect : true, m_point : res[ 0 ], m_pointsCnt : res.length };
+                res.m_intersect  = true;
+                res.m_points     = res.m_points.concat( currRes );
+                res.m_pointsCnt += currRes.length;
             }
         }
 
-        return { m_intersect : false };
+        return res;
     }
 }
 

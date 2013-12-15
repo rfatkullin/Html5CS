@@ -11,23 +11,26 @@ var CreateWorld = function()
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
 
+	this.NewWall = function ( a_pos )
+	{
+		var wall = { m_id   : this.GetUniqueId(),
+					 m_type : 'wall',
+					 m_pos  : a_pos };
+
+		this.m_world[ wall.m_id ] = wall;
+		this.m_walls[ wall.m_id ] = new Geometry.Rectangle( wall.m_pos, Wall.WIDTH, Wall.HEIGHT );
+	}
+
 	this.GenerateMap = function ()
 	{
-		var wall1 = { m_id   : this.GetUniqueId(),
-					  m_type : 'wall',
-					  m_pos  : { m_x : 200.0, m_y : 300.0 } };
+		this.NewWall( { m_x : 110.0, m_y : 300.0 } );
+		this.NewWall( { m_x : 110.0, m_y : 350.0 } );		
+		this.NewWall( { m_x : 200.0, m_y : 300.0 } );
+		this.NewWall( { m_x : 200.0, m_y : 350.0 } );
+		this.NewWall( { m_x : 500.0, m_y : 500.0 } );
 
-		var wall2 = { m_id   : this.GetUniqueId(),
-					  m_type : 'wall',
-					  m_pos  : { m_x : 500.0, m_y : 500.0 } };
-
-		this.m_world[ wall1.m_id ] = wall1;
-		this.m_world[ wall2.m_id ] = wall2;
-
-		this.m_walls[ wall1.m_id ] = new Geometry.Rectangle( wall1.m_pos, Wall.WIDTH, Wall.HEIGHT );
-		this.m_walls[ wall2.m_id ] = new Geometry.Rectangle( wall2.m_pos, Wall.WIDTH, Wall.HEIGHT );
-
-		TeamsDeployPos = [ { m_x : 100, 			m_y : MAP_HEIGHT / 2 },
+		
+		TeamsDeployPos = [ { m_x : 50, 			m_y : MAP_HEIGHT / 2 },
 						   { m_x : MAP_WIDTH - 100, m_y : MAP_HEIGHT / 2 } ];
 
 		TeamsDir 	   = [ { m_x :  1, m_y : 0 },
@@ -116,7 +119,7 @@ var CreateWorld = function()
 
 				if ( res.m_intersect )
 				{
-					Logger.Info( 'Wall : ' + wallId + '. Intersection detected. Iter : ' + iter + '. Points count : ' + res.m_pointsCnt );
+					//Logger.Info( 'Wall : ' + wallId + '. Intersection detected. Iter : ' + iter + '. Points count : ' + res.m_pointsCnt );
 					intersPointCnt = res.m_pointsCnt;
 				}
 			}
