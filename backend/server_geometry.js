@@ -16,7 +16,7 @@ Geometry =
 
     Dist : function ( a_vecA, a_vecB )
     {
-        return Math.sqrt( DistSqr( a_vecA, a_vecB ) );
+        return Math.sqrt( this.DistSqr( a_vecA, a_vecB ) );
     },
 
     PseudoScalarMul : function ( a_vecA, a_vecB )
@@ -186,7 +186,7 @@ Geometry =
         var params = [ ( -b - discr ) / ( 2 * a ),
                        ( -b + discr ) / ( 2 * a ) ];
 
-        if ( Math.abs( params[ 0 ] - params[ 1 ] ) < Constants.EPSILON )        
+        if ( Math.abs( params[ 0 ] - params[ 1 ] ) < Constants.EPSILON )
             params = [ params[ 0 ] ];
 
         var ans = [];

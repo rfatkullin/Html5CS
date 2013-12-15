@@ -3,6 +3,7 @@ var Geometry = require( './server_geometry.js' ).Geometry;
 var Logger   = require( '../shared/logger' ).Logger;
 var Commands = require( '../shared/commands' ).Commands;
 var Player   = require( '../shared/constants' ).Player;
+var Wall 	 = require( '../shared/constants' ).Wall;
 
 
 var CreateWorld = function()
@@ -23,13 +24,41 @@ var CreateWorld = function()
 
 	this.GenerateMap = function ()
 	{
-		this.NewWall( { m_x : 110.0, m_y : 300.0 } );
-		this.NewWall( { m_x : 110.0, m_y : 350.0 } );		
-		this.NewWall( { m_x : 200.0, m_y : 300.0 } );
-		this.NewWall( { m_x : 200.0, m_y : 350.0 } );
-		this.NewWall( { m_x : 500.0, m_y : 500.0 } );
+		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 1.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 2.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 3.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 4.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 5.5 * Wall.HEIGHT } );
 
-		
+
+		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 1.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 4.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 5.5 * Wall.HEIGHT } );
+
+		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 11.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 7.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH -  9.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
+
+		this.NewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 12.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 11.5 * Wall.HEIGHT } );
+
+		this.NewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
+		this.NewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
+
+	}
+
+	this.SetPing = function ( a_ping )
+	{
+		this.m_ping = a_ping;
+		Logger.Info( 'New ping: ' + a_ping );
+	}
+
+	this.InitTeams = function ()
+	{
 		TeamsDeployPos = [ { m_x : 50, 			m_y : MAP_HEIGHT / 2 },
 						   { m_x : MAP_WIDTH - 100, m_y : MAP_HEIGHT / 2 } ];
 
@@ -96,9 +125,9 @@ var CreateWorld = function()
 		this.m_updObjs[ a_playerInd ] = player;
 	}
 
-	this.MovePlayer = function( a_playerInd, a_shift )
+	this.MovePlayerByOneAxis = function ( a_playerId, a_shift )
 	{
-		var player 	= this.m_world[ a_playerInd ];
+		var player  = this.m_world[ a_playerId ];
 		var maxIter = Collide.ITER_CNT;
 
 		for ( var wallId in this.m_walls )
@@ -140,7 +169,16 @@ var CreateWorld = function()
 		var factor 	 = maxIter / Collide.ITER_CNT;
 		player.m_pos = { m_x : player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
 					     m_y : player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
-		this.m_updObjs[ a_playerInd ] = player;
+		this.m_updObjs[ a_playerId ] = player;
+	}
+
+	this.MovePlayer = function ( a_playerId, a_shift )
+	{
+		//Пытаемся двигать по оси X
+		this.MovePlayerByOneAxis( a_playerId, { m_x : a_shift.m_x, m_y : 0.0 } );
+
+		//Пытаемся двигать по оси Y
+		this.MovePlayerByOneAxis( a_playerId, { m_x : 0.0, m_y : a_shift.m_y } );
 	}
 
 	this.IsOutOfField = function ( a_pos )
@@ -335,7 +373,7 @@ var CreateWorld = function()
 
 			if ( res.m_intersect )
 			{
-				var dist = Geometry.DistTo( m_pos, res.m_point );
+				var dist = Geometry.Dist( a_pos, res.m_point );
 				interObjs.push( { m_id : id, m_dist : dist } );
 			}
 		}
@@ -409,6 +447,9 @@ var CreateWorld = function()
 	this.m_bullets 			= {};
 
 	this.GenerateMap();
+	this.InitTeams();
+	this.m_walls[ this.GetUniqueId() ] = new Geometry.Rectangle( { m_x : MAP_WIDTH / 2.0, m_y : MAP_HEIGHT / 2.0 }, MAP_WIDTH, MAP_HEIGHT );
+
 }
 
 module.exports.CreateWorld = CreateWorld;
