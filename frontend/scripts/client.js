@@ -116,8 +116,6 @@ function OnClick( a_event )
         return;
 
     ProcessPlayerAttack( mouseWorldPos );
-
-    document.getElementById( "mouse_click_pos" ).innerHTML = "Mouse click pos: (" + mouseWorldPos.m_pos.m_x + ", " + mouseWorldPos.m_pos.m_y + ")";
 }
 
 function ProcessPlayerAttack( a_mousePos )
@@ -167,7 +165,6 @@ function ProcessInput()
                         dirPoint : g_client.m_mouseLastPos };
         commands.push( command );
         g_mouseMove = false;
-        document.getElementById( "mouse_pos" ).innerHTML = "Mouse pos: (" + g_client.m_mouseLastPos.m_x + ", " + g_client.m_mouseLastPos.m_y + ")";
     }
 
     if ( commands.length > 0 )
@@ -248,8 +245,6 @@ function NextState()
     g_cursor.Draw();
 
     ProcessInput();
-
-    document.getElementById( "world_obj_cnt" ).innerHTML = "Objects cnt: " + Object.keys( g_world.m_renderWorld ).length;
 }
 
 function DrawGameField()

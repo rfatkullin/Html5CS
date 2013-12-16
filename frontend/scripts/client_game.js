@@ -8,7 +8,6 @@ function World()
 
 	var Init = function ()
 	{
-		INTER_TIME	  = 75;
 		SNAPSHOTS_CNT = 20;
 
 		this.m_snapshotObjList 	= [];
@@ -30,8 +29,6 @@ function World()
 
 	this.DrawObjects = function ()
 	{
-		//InfLog( 'World to render : ' + JSON.stringify( this.m_renderWorld ) );
-
 		var currObj;
 
 		for ( var key in this.m_renderWorld )
@@ -89,13 +86,11 @@ function World()
 	{
 		var width = ( a_player.m_health / Player.INIT_HEALTH ) * ( 2.0 * Player.RAD );
 		var pos = { m_x : a_player.m_pos.m_x - Player.RAD + width / 2.0,
-					m_y : a_player.m_pos.m_y - Player.RAD - 5 };
+					m_y : a_player.m_pos.m_y - Player.RAD - Player.HEALTH_IND_OFFS };
 
 		var rec = new Rectangle( pos, width, Player.HEALTH_HEIGHT );
 
 		rec.Draw( healthColor );
-
-		InfLog( 'Player health = ' + a_player.m_health );
 	}
 
 	this.CreateWorldToDraw = function ()
@@ -106,7 +101,7 @@ function World()
 			return;
 
 		var currTime 			= ( new Date() ).getTime();
-		var renderTime 			= currTime - INTER_TIME;
+		var renderTime 			= currTime - Game.INTER_TIME;
 		var lastSnapshotInd 	= this.m_snapshotObjList.length - 1;
 		var leftBound			= -1;
 		var rightBound			= -1;

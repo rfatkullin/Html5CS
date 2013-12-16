@@ -4,10 +4,11 @@ var Logger   		= require( '../shared/logger' ).Logger;
 var Commands 		= require( '../shared/commands' ).Commands;
 var Player   		= require( '../shared/constants' ).Player;
 var Wall 	 		= require( '../shared/constants' ).Wall;
+var EPSILON	 		= require( '../shared/constants' ).Geometry.EPSILON;
 
 var CreateWorld = function()
 {
-	var SNAPSHOTS_CNT 	= 40; // sequence for 1000 / TICKS_INTERVAL * SNAPSHOTS_CNT seconds
+	var SNAPSHOTS_CNT 	= 66; // 2 sec
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
 
@@ -63,7 +64,7 @@ var CreateWorld = function()
 		return this.m_currObjId++;
 	}
 
-	this.ProcessControl = function( a_playerId, a_commands )
+	this.ProcessControl = function( a_time, a_playerId, a_commands )
 	{
 		for ( var i = 0; i < a_commands.length; ++i )
 		{
@@ -73,7 +74,7 @@ var CreateWorld = function()
 			{
 				case Commands.ATTACK :
 
-					this.ProcessAttack( a_playerId, command.pos, command.point );
+					this.ProcessAttack( a_time, a_playerId, command.pos, command.point );
 					break;
 
 				case Commands.CHANGE_MOVE_DIR :
@@ -188,34 +189,7 @@ var CreateWorld = function()
 			this.MovePlayer( this.m_world[ id ], a_expiredTime );
 	}
 
-	this.DeleteObjects = function ( a_idList )
-	{
-		for ( var id in a_idList )
-		{
-			switch ( this.m_world[ id ].m_type )
-			{
-				case 'player' :
-					this.DeletePlayer( id );
-					break;
-
-				case 'bullet' :
-					delete this.m_bullets[ id ];
-					break;
-
-				case 'wall' :
-					delete this.m_walls[ id ];
-					break;
-
-				default :
-					break;
-			}
-
-			this.m_delObjs[ id ] = this.m_world[ id ];
-			delete this.m_world[ id ];
-		}
-	}
-
-	this.SnapshotWorld = function ( a_currTick )
+	this.SnapshotWorld = function ( a_currTime, a_currTick )
 	{
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
@@ -223,7 +197,8 @@ var CreateWorld = function()
 		for ( var id in this.m_delObjs )
 			delete this.m_world[ id ];
 
-		this.m_snapshotObjList.push( {  m_tick 	   : a_currTick,
+		this.m_snapshotObjList.push( {  m_time	   : a_currTime,
+										m_tick 	   : a_currTick,
 										m_addObjs  : jQuery.extend( true, {}, this.m_addObjs ),
 										m_updObjs  : jQuery.extend( true, {}, this.m_updObjs ),
 										m_delObjs  : jQuery.extend( true, {}, this.m_delObjs ),
@@ -234,10 +209,10 @@ var CreateWorld = function()
 		this.m_delObjs	= {};
 	}
 
-	this.NextStep = function ( a_expiredTime, a_currTick )
+	this.NextStep = function ( a_currTime, a_expiredTime, a_currTick )
 	{
 		this.MovePlayers( a_expiredTime );
-		this.SnapshotWorld( a_currTick );
+		this.SnapshotWorld( a_currTime, a_currTick );
 	}
 
 	this.GetSnapshotDiff = function ( a_startTick )
@@ -312,34 +287,71 @@ var CreateWorld = function()
 		this.m_addObjs[ a_userId ] 			= player;
 	}
 
-	this.DeletePlayer = function( a_playerId )
+	this.PlayerAlive = function( a_playerId )
 	{
-		this.m_teams[ this.m_world[ a_playerId ].m_teamId ]--
-		delete this.m_playerCommands[ a_playerId ];
-		delete this.m_players[ a_playerId ];
+		return this.m_players[ a_playerId ] !== undefined;
 	}
 
-	this.ProcessAttack = function ( a_playerId, a_pos, a_point )
+	this.DeletePlayer = function( a_playerId )
 	{
-		var player 		= this.m_world[ a_playerId ];
+		if ( this.m_world[ a_playerId ] === undefined )
+			return;
+
+		this.m_teams[ this.m_world[ a_playerId ].m_teamId ]--
+		this.m_delObjs[ a_playerId ] = this.m_world[ a_playerId ];
+
+		delete this.m_playerCommands[ a_playerId ];
+		delete this.m_players[ a_playerId ];
+		delete this.m_world[ a_playerId ];
+	}
+
+	this.GetWorldByTime = function ( a_time )
+	{
+		var leftBound  	= -1;
+		var rightBound 	= -1;
+		var lastInd 	= this.m_snapshotObjList.length - 1;
+
+		if ( a_time > this.m_snapshotObjList[ lastInd ].m_time )
+			return this.m_snapshotObjList[ lastInd ].m_snapshot;
+
+		for ( var i = lastInd; i > 0; --i )
+		{
+			if ( ( this.m_snapshotObjList[ i - 1 ].m_time <= a_time ) && ( a_time <= this.m_snapshotObjList[ i ].m_time )  )
+			{
+				leftBound  = i - 1;
+				rightBound = i;
+				break;
+			}
+		}
+
+		if ( ( a_time - this.m_snapshotObjList[ leftBound ].m_time ) <= ( this.m_snapshotObjList[ rightBound ].m_time - a_time ) )
+			return this.m_snapshotObjList[ leftBound ].m_snapshot;
+
+		return this.m_snapshotObjList[ rightBound ].m_snapshot;
+	}
+
+	this.ProcessAttack = function ( a_time, a_playerId, a_pos, a_point )
+	{
+		var world 		= this.GetWorldByTime( a_time );
+		var player 		= world[ a_playerId ];
 		var interObjs	= [];
 		var res 		= { m_intersect : false };
 		var dir 		= Geometry.GetDirection( a_pos, a_point );
 		var closestObj  = {};
 
-		for ( var id in this.m_world )
+		for ( var id in world )
 		{
 			if ( id === a_playerId )
 				continue;
 
 			res.m_intersect = false;
 
-			switch ( this.m_world[ id ].m_type )
+			switch ( world[ id ].m_type )
 			{
 				case 'player' :
-					if ( this.m_world[ id ].m_teamId === player.m_teamId )
+					if ( world[ id ].m_teamId === player.m_teamId )
 						continue;
-					res = Geometry.RayCircleIntersect( a_pos, dir, this.m_world[ id ].m_pos, Player.RAD );
+					res = Geometry.RayCircleIntersect( a_pos, dir, world[ id ].m_pos, Player.RAD );
 					break;
 
 				case 'wall' :
@@ -359,37 +371,39 @@ var CreateWorld = function()
 					closestObj.m_id = id;
 					closestObj.m_dist = dist;
 				}
-				else if ( dist + Geometry.EPSILON < closestObj.dist )
+				else if ( dist + EPSILON < closestObj.m_dist )
 				{
 					closestObj = { m_id 	: id,
 								   m_dist 	: dist };
 				}
-
-				Logger.Info( 'Attack ' + this.m_world[ id ].m_type );
 			}
 		}
 
 		if ( closestObj.m_id !== undefined )
 		{
+			if ( this.m_world[ closestObj.m_id ] === undefined )
+				return;
+
 			if ( this.m_world[ closestObj.m_id ].m_type === 'player' )
 			{
 				--this.m_world[ closestObj.m_id ].m_health;
 				this.m_updObjs[ closestObj.m_id ] = this.m_world[ closestObj.m_id ];
 			}
 
-			Logger.Info( 'Attack : ' + this.m_world[ closestObj.m_id ].m_type + ' Health = ' + this.m_world[ closestObj.m_id ].m_health );
+			if ( this.m_world[ closestObj.m_id ].m_health <= 0 )
+				this.DeletePlayer( closestObj.m_id );
 		}
 	}
 
 	//Debug
 	this.TestIntersections = function ()
 	{
-		var wall = new Geometry.Rectangle( { m_x : 3.0, m_y : 1.0 }, 2.0, 2.0 );
-		// var res =  Geometry.RayRecIntersect( { m_x : 0.0, m_y : 1.0 }, { m_x : 3.0, m_y : 1.0 }, wall );
+		var wall = new Geometry.Rectangle( { m_x : 2.0, m_y : 2.0 }, 2.0, 2.0 );
+		var res =  Geometry.RayRecIntersect( { m_x : 6.0, m_y : 4.0 }, { m_x : -1.0, m_y : 1.0 }, wall );
 
 		//res =  Geometry.RayCircleIntersect( { m_x : 5.0, m_y : 1.0 }, { m_x : 0.0, m_y : 1.0 }, { m_x : 5.0, m_y : 7.0 }, 3.0 );
 
-		var res = Geometry.CircleRecIntersect( { m_x : 1.0, m_y : 1.0 }, 1.0, wall  )
+		//var res = Geometry.CircleRecIntersect( { m_x : 1.0, m_y : 1.0 }, 1.0, wall  )
 
 
 		if ( res.m_intersect )
@@ -413,6 +427,8 @@ var CreateWorld = function()
 
 	this.GenerateMap();
 	this.InitTeams();
+
+	//Ограничивающий прямоугольник
 	this.m_walls[ this.GetUniqueId() ] = new Geometry.Rectangle( { m_x : MAP_WIDTH / 2.0, m_y : MAP_HEIGHT / 2.0 }, MAP_WIDTH, MAP_HEIGHT );
 
 }

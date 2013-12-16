@@ -1,5 +1,7 @@
 var Logger 			= require( '../shared/logger' ).Logger;
+var Game 			= require( '../shared/constants' ).Game;
 var GameModule 		= require( './server_game' );
+
 
 function GetTime()
 {
@@ -18,10 +20,10 @@ function MessageProcess( a_msg )
 		return;
 	}
 
+	var currTime = GetTime();
 	switch ( a_msg.type )
 	{
 		case 'pong'	:
-			var currTime = GetTime();
 			this.m_ping = ( currTime - this.m_pingStartTime ) / 2.0;
 
 			if ( this.m_sentLogin === false )
@@ -39,7 +41,7 @@ function MessageProcess( a_msg )
 			break;
 
 		case 'control' :
-			g_world.ProcessControl( this.m_playerId, a_msg.commands );
+			g_world.ProcessControl( currTime - this.m_ping - Game.INTER_TIME, this.m_playerId, a_msg.commands );
 			//Logger.Info( '[CL=' + this.m_playerId + ']:' + ' Received control.' );
 			break;
 
@@ -56,12 +58,8 @@ function MessageProcess( a_msg )
 
 function OnClose()
 {
-	var delList = {};
-	delList[ this.m_playerId ] = true;
-	g_world.DeleteObjects( delList );
-
+	g_world.DeletePlayer( this.m_playerId );
 	delete g_server.m_conns[ this.m_playerId ];
-
 	--g_server.m_usersCnt;
 
 	Logger.Info( '[CL=' + this.m_playerId + ']' + ' left.' );
@@ -111,6 +109,12 @@ function SendSnapshots()
 		if ( !conn.m_logined )
 			continue;
 
+		if ( !g_world.PlayerAlive( conn.m_playerId ) )
+		{
+			conn.close();
+			continue;
+		}
+
 		var sendSnapshot = g_world.GetSnapshotDiff( conn.m_lastAckSnapshot );
 
 		conn.send( JSON.stringify( { type	: 'update',
@@ -138,22 +142,9 @@ function UpdatePings()
 	}
 }
 
-function PrintPings()
-{
-	for ( var connId in g_server.m_conns )
-	{
-		conn = g_server.m_conns[ connId ];
-
-		if ( !conn.m_logined )
-			continue;
-
-		Logger.Info( 'Ping for client ' + conn.m_playerId + ' = '  + conn.m_ping / 1000.0 );
-	}
-}
-
 function TickHandler()
 {
-	g_world.NextStep( TICKS_INTERVAL / MSECS_IN_SEC, g_server.m_tick );
+	g_world.NextStep( GetTime(), TICKS_INTERVAL / MSECS_IN_SEC, g_server.m_tick );
 
 	SendSnapshots();
 
@@ -171,7 +162,6 @@ function main()
 
 	setInterval( TickHandler, TICKS_INTERVAL );
 	setInterval( UpdatePings, PING_UPD_INTERVAL );
-	setInterval( PrintPings, 5000 );
 }
 
 main();
