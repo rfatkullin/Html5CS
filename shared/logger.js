@@ -19,4 +19,6 @@
 })()
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-	module.exports.Logger = { Info : InfLog, Error : ErrLog };
+	module.exports.Logger = { Info    : InfLog,
+							  Error   : ErrLog };
+

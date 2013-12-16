@@ -128,17 +128,6 @@ function Rectangle( a_pos, a_width, a_height )
 
 function Line( a_begin, a_end, a_length )
 {
-    var Init = function()
-    {
-        this.m_length = a_length;
-
-        this.m_verts = [ a_begin.m_x, a_begin.m_y,
-                         a_end.m_x,   a_end.m_y ];
-
-        this.m_size = 2;
-        this.m_vertBuff = gl.createBuffer();
-    }
-
     this.ShiftOn = function ( a_pos )
     {
         for ( var i = 0; i < 2 * this.m_size; i += 2 )
@@ -175,35 +164,10 @@ function Line( a_begin, a_end, a_length )
        this.m_verts[ 3 ] = this.m_verts[ 1 ] + a_dir.m_y * this.m_length;
     }
 
-    Init.call( this );
-}
+    this.m_length = a_length;
+    this.m_verts = [ a_begin.m_x, a_begin.m_y,
+                     a_end.m_x,   a_end.m_y ];
 
-function Triangle( a_pos )
-{
-    this.m_verts = [ 100.0, 100.0, 200.0, 100.0, 150.0, 150.0  ];
-    this.m_size  = 3;
-}
-
-function NormalizeVector( a_vec )
-{
-    var normVec = $.extend( false, {}, a_vec );
-    var len = Math.sqrt( normVec.m_x * normVec.m_x + normVec.m_y * normVec.m_y );
-
-    if ( !( len < Geometry.EPSILON ) )
-    {
-        normVec.m_x /= len;
-        normVec.m_y /= len;
-    }
-
-    return normVec;
-}
-
-function GetDirection( a_p1, a_p2 )
-{
-    var dirVec = { m_x : a_p2.m_x - a_p1.m_x,
-                   m_y : a_p2.m_y - a_p1.m_y };
-
-    NormalizeVector( dirVec );
-
-    return dirVec;
+    this.m_size = 2;
+    this.m_vertBuff = gl.createBuffer();
 }

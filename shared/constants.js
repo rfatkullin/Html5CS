@@ -1,14 +1,15 @@
 
 (function ()
 {
-	Wall   = { 	WIDTH : 50,
-			  	HEIGHT : 50
+	Wall   = { 	WIDTH  : 40,
+			  	HEIGHT : 40
 			 };
 
-	Player = { 	VEL 			: 5,
+	Player = { 	VEL 			: 15,
 				RAD 			: 15,
-				INIT_HEALTH		: 100,
-    			BARREL_LENGTH 	: 20.0
+				INIT_HEALTH		:  5,
+    			BARREL_LENGTH 	: 20.0,
+    			HEALTH_HEIGHT	:  2
     		 };
 
 	Geometry = { EPSILON : 0.000000001 };

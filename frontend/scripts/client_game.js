@@ -2,9 +2,9 @@ function World()
 {
 	var ownPlayerColor  	= [ 0.0, 1.0, 0.0, 0.3 ];
 	var ourCommandColor 	= [ 0.0, 0.0, 1.0, 0.3 ];
-	var opponenCommandColor = [ 1.0, 0.0, 0.0, 0.3 ];
+	var enemyCommandColor 	= [ 1.0, 0.0, 0.0, 0.3 ];
 	var wallColor			= [ 0.5, 0.0, 1.0, 1.0 ];
-	var rtPlayerColor		= [ 0.0, 0.0, 0.0, 1.0 ];
+	var healthColor			= [ 0.0, 0.5, 0.0, 1.0 ];
 
 	var Init = function ()
 	{
@@ -14,19 +14,13 @@ function World()
 		this.m_snapshotObjList 	= [];
 	    this.m_state 			= { start : false, login : undefined };
 	    this.m_playerId			= -1;
-	    this.m_playerTeamId		= -1;
 	    this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
 	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
 	}
 
-	this.SetPlayerId = function ( a_id )
+	this.SetPlayerInfo = function ( a_id )
 	{
 		this.m_playerId = a_id;
-	}
-
-	this.SetPlayerTeamId = function( a_teamId )
-	{
-		this.m_playerTeamId = teamId;
 	}
 
 	this.GetPlayerPos = function ()
@@ -64,10 +58,12 @@ function World()
 	{
 		if ( a_player.m_id === this.m_playerId )
 			this.DrawPlayer( a_player, ownPlayerColor );
-		else if ( a_player.m_teamId === this.m_playerTeamId )
+		else if ( a_player.m_teamId === this.m_renderWorld[ this.m_playerId ].m_teamId )
 			this.DrawPlayer( a_player, ourCommandColor );
 		else
-			this.DrawPlayer( a_player, opponenCommandColor );
+			this.DrawPlayer( a_player, enemyCommandColor );
+
+		this.DrawPlayerHealth( a_player );
 	}
 
 	this.DrawPlayer = function ( a_player, a_color )
@@ -87,6 +83,19 @@ function World()
 	{
 	    this.CreateWorldToDraw();
 	    this.DrawObjects();
+	}
+
+	this.DrawPlayerHealth = function ( a_player )
+	{
+		var width = ( a_player.m_health / Player.INIT_HEALTH ) * ( 2.0 * Player.RAD );
+		var pos = { m_x : a_player.m_pos.m_x - Player.RAD + width / 2.0,
+					m_y : a_player.m_pos.m_y - Player.RAD - 5 };
+
+		var rec = new Rectangle( pos, width, Player.HEALTH_HEIGHT );
+
+		rec.Draw( healthColor );
+
+		InfLog( 'Player health = ' + a_player.m_health );
 	}
 
 	this.CreateWorldToDraw = function ()
@@ -244,7 +253,7 @@ function World()
 									   m_updated   : Object.keys( diffObj.m_updObjs ),
 									   m_deleted   : Object.keys( diffObj.m_delObjs ) } );
 
-		InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
+		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
 	Init.call( this );

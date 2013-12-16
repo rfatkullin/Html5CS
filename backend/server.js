@@ -39,7 +39,7 @@ function MessageProcess( a_msg )
 			break;
 
 		case 'control' :
-			g_world.ProcessUserInput( this.m_playerId, a_msg.commands );
+			g_world.ProcessControl( this.m_playerId, a_msg.commands );
 			//Logger.Info( '[CL=' + this.m_playerId + ']:' + ' Received control.' );
 			break;
 

@@ -1,10 +1,9 @@
-var jQuery   = require( 'jquery' );
-var Geometry = require( './server_geometry.js' ).Geometry;
-var Logger   = require( '../shared/logger' ).Logger;
-var Commands = require( '../shared/commands' ).Commands;
-var Player   = require( '../shared/constants' ).Player;
-var Wall 	 = require( '../shared/constants' ).Wall;
-
+var jQuery   		= require( 'jquery' );
+var Geometry 		= require( './server_geometry.js' ).Geometry;
+var Logger   		= require( '../shared/logger' ).Logger;
+var Commands 		= require( '../shared/commands' ).Commands;
+var Player   		= require( '../shared/constants' ).Player;
+var Wall 	 		= require( '../shared/constants' ).Wall;
 
 var CreateWorld = function()
 {
@@ -30,7 +29,6 @@ var CreateWorld = function()
 		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 4.5 * Wall.HEIGHT } );
 		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 5.5 * Wall.HEIGHT } );
 
-
 		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 1.5 * Wall.HEIGHT } );
 		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
 		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
@@ -51,12 +49,6 @@ var CreateWorld = function()
 
 	}
 
-	this.SetPing = function ( a_ping )
-	{
-		this.m_ping = a_ping;
-		Logger.Info( 'New ping: ' + a_ping );
-	}
-
 	this.InitTeams = function ()
 	{
 		TeamsDeployPos = [ { m_x : 50, 			m_y : MAP_HEIGHT / 2 },
@@ -71,63 +63,62 @@ var CreateWorld = function()
 		return this.m_currObjId++;
 	}
 
-	this.ProcessUserInput = function( a_userId, a_controlObj )
+	this.ProcessControl = function( a_playerId, a_commands )
 	{
-		this.m_playerCommands[ a_userId ] = this.m_playerCommands[ a_userId ].concat( a_controlObj );
-	}
-
-	this.ProcessAllInputs = function()
-	{
-		for ( var id in this.m_playerCommands )
+		for ( var i = 0; i < a_commands.length; ++i )
 		{
-			if ( this.m_playerCommands[ id ].length != 0 )
+			var command = a_commands[ i ];
+
+			switch ( command.type )
 			{
-				for ( var i = 0; i < this.m_playerCommands[ id ].length; ++i )
-				{
-					var command = this.m_playerCommands[ id ][ i ];
+				case Commands.ATTACK :
 
-					switch ( command.type )
-					{
-						case Commands.ATTACK :
+					this.ProcessAttack( a_playerId, command.pos, command.point );
+					break;
 
-							this.ProcessAttack( id, command.pos, command.dir );
-							break;
+				case Commands.CHANGE_MOVE_DIR :
 
-						case Commands.MOVE :
+					this.ChangePlayerMoveDir( a_playerId, command.dir );
+					break;
 
-							this.MovePlayer( id, command.shift );
-							break;
+				case Commands.CHANGE_DIR :
 
-						case Commands.CHANGE_DIR :
+					this.ChangePlayerDirPoint( a_playerId, command.dirPoint );
+					break;
 
-							this.PlayerChangeDir( id, command.dir );
-							break;
+				default :
 
-						default :
-
-							Logger.Error( '[CL= ' + id + ' ]: Non-existent command: ' + command.type + '.' );
-							Logger.Error( JSON.stringify( command ) );
-							break;
-					}
-				}
+					Logger.Error( '[CL= ' + a_playerId + ' ]: Non-existent command: ' + command.type + '.' );
+					Logger.Error( JSON.stringify( command ) );
+					break;
 			}
-
-			this.m_playerCommands[ id ] = [];
 		}
 	}
 
-	this.PlayerChangeDir = function ( a_playerInd, a_dir )
+	this.ChangePlayerMoveDir = function ( a_playerId, a_moveDir )
 	{
-		var player = this.m_world[ a_playerInd ];
-
-		player.m_dir = a_dir;
-
-		this.m_updObjs[ a_playerInd ] = player;
+		this.m_world[ a_playerId ].m_moveDir = a_moveDir;
+		Logger.Info( 'Change [' + a_playerId + '] player dir to ' + JSON.stringify( a_moveDir ) );
 	}
 
-	this.MovePlayerByOneAxis = function ( a_playerId, a_shift )
+	this.ChangePlayerDirPoint = function ( a_playerId, a_dirPoint )
 	{
-		var player  = this.m_world[ a_playerId ];
+		var player 			= this.m_world[ a_playerId ];
+		player.m_dir		= Geometry.GetDirection( player.m_pos, a_dirPoint );
+		player.m_dirPoint 	= a_dirPoint;
+
+		this.m_updObjs[ a_playerId ] = player;
+	}
+
+	this.ChangePlayerDir = function ( a_player )
+	{
+		a_player.m_dir = Geometry.GetDirection( a_player.m_pos, a_player.m_dirPoint );
+
+		this.m_updObjs[ a_player.m_id ] = a_player;
+	}
+
+	this.MovePlayerByOneAxis = function ( a_player, a_shift )
+	{
 		var maxIter = Collide.ITER_CNT;
 
 		for ( var wallId in this.m_walls )
@@ -141,8 +132,8 @@ var CreateWorld = function()
 				--iter;
 				intersPointCnt 	= 0;
 				var factor = iter / Collide.ITER_CNT;
-				var newPos = { m_x : player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
-					   		   m_y : player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
+				var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+					   		   m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 
 				res =  Geometry.CircleRecIntersect( newPos, Player.RAD, wall );
 
@@ -167,50 +158,34 @@ var CreateWorld = function()
 		}
 
 		var factor 	 = maxIter / Collide.ITER_CNT;
-		player.m_pos = { m_x : player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
-					     m_y : player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
-		this.m_updObjs[ a_playerId ] = player;
+		a_player.m_pos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+					       m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
+		this.m_updObjs[ a_player.m_id ] = a_player;
 	}
 
-	this.MovePlayer = function ( a_playerId, a_shift )
+	this.MovePlayer = function ( a_player, a_expiredTime )
 	{
+		var shift = { m_x : a_expiredTime * Player.VEL * a_player.m_moveDir.m_x,
+					  m_y : a_expiredTime * Player.VEL * a_player.m_moveDir.m_y };
+
+		if ( Geometry.IsNullVec( shift ) )
+			return;
+
 		//Пытаемся двигать по оси X
-		this.MovePlayerByOneAxis( a_playerId, { m_x : a_shift.m_x, m_y : 0.0 } );
+		this.MovePlayerByOneAxis( a_player, { m_x : shift.m_x, m_y : 0.0 } );
 
 		//Пытаемся двигать по оси Y
-		this.MovePlayerByOneAxis( a_playerId, { m_x : 0.0, m_y : a_shift.m_y } );
+		this.MovePlayerByOneAxis( a_player, { m_x : 0.0, m_y : shift.m_y } );
+
+		this.ChangePlayerDir( a_player );
+
+		Logger.Info( 'Shift [' + a_player.m_id + '] on vec ' + JSON.stringify( shift ) );
 	}
 
-	this.IsOutOfField = function ( a_pos )
+	this.MovePlayers = function ( a_expiredTime )
 	{
-		if ( a_pos.m_x < 0 || a_pos.m_x > MAP_WIDTH ||
-			 a_pos.m_y < 0 || a_pos.m_y > MAP_HEIGHT )
-			return true;
-
-		return false;
-	}
-
-	this.MoveAllObjects = function ( a_expiredTime )
-	{
-		for ( var id in this.m_world )
-		{
-			if ( this.m_world[ id ].m_vel === undefined )
-				continue;
-
-			var modObj = this.m_world[ id ];
-
-			modObj.m_pos.m_x += a_expiredTime * modObj.m_vel.m_x;
-			modObj.m_pos.m_y += a_expiredTime * modObj.m_vel.m_y;
-
-			if ( this.IsOutOfField( modObj.m_pos ) === true )
-			{
-				var delList = {};
-				delList[ id ] = true;
-				this.DeleteObjects( delList );
-			}
-
-			this.m_updObjs[ id ] = this.m_world[ id ];
-		}
+		for ( var id in this.m_players )
+			this.MovePlayer( this.m_world[ id ], a_expiredTime );
 	}
 
 	this.DeleteObjects = function ( a_idList )
@@ -261,8 +236,7 @@ var CreateWorld = function()
 
 	this.NextStep = function ( a_expiredTime, a_currTick )
 	{
-		this.MoveAllObjects( a_expiredTime );
-		this.ProcessAllInputs();
+		this.MovePlayers( a_expiredTime );
 		this.SnapshotWorld( a_currTick );
 	}
 
@@ -317,7 +291,8 @@ var CreateWorld = function()
 		var teamId = 0;
 
 		if ( this.m_teams[ 0 ] > this.m_teams[ 1 ] )
-			teamIdId = 1;
+			teamId = 1;
+		this.m_teams[ teamId ]++;
 
 		var pos = jQuery.extend( false, {}, TeamsDeployPos[ teamId ] );
 		var dir = jQuery.extend( false, {}, TeamsDir[ teamId ] );
@@ -327,6 +302,8 @@ var CreateWorld = function()
 					   m_teamId 	: teamId,
 					   m_health		: Player.INIT_HEALTH,
 					   m_pos 		: pos,
+					   m_moveDir	: { m_x : 0.0, m_y : 0.0 },
+					   m_dirPoint	: { m_x : pos.m_x + dir.m_x, m_y : pos.m_x + dir.m_x },
 					   m_dir  		: dir };
 
 		this.m_playerCommands[ a_userId ] 	= [];
@@ -342,11 +319,13 @@ var CreateWorld = function()
 		delete this.m_players[ a_playerId ];
 	}
 
-	this.ProcessAttack = function ( a_playerId, a_pos, a_dir )
+	this.ProcessAttack = function ( a_playerId, a_pos, a_point )
 	{
 		var player 		= this.m_world[ a_playerId ];
 		var interObjs	= [];
 		var res 		= { m_intersect : false };
+		var dir 		= Geometry.GetDirection( a_pos, a_point );
+		var closestObj  = {};
 
 		for ( var id in this.m_world )
 		{
@@ -360,11 +339,11 @@ var CreateWorld = function()
 				case 'player' :
 					if ( this.m_world[ id ].m_teamId === player.m_teamId )
 						continue;
-					res = Geometry.RayCircleIntersect( a_pos, a_dir, this.m_world[ id ].m_pos, Player.RAD );
+					res = Geometry.RayCircleIntersect( a_pos, dir, this.m_world[ id ].m_pos, Player.RAD );
 					break;
 
 				case 'wall' :
-					res =  Geometry.RayRecIntersect( a_pos, a_dir, this.m_walls[ id ] );
+					res =  Geometry.RayRecIntersect( a_pos, dir, this.m_walls[ id ] );
 					break;
 
 				default :
@@ -374,46 +353,32 @@ var CreateWorld = function()
 			if ( res.m_intersect )
 			{
 				var dist = Geometry.Dist( a_pos, res.m_point );
-				interObjs.push( { m_id : id, m_dist : dist } );
+
+				if ( closestObj.m_id === undefined )
+				{
+					closestObj.m_id = id;
+					closestObj.m_dist = dist;
+				}
+				else if ( dist + Geometry.EPSILON < closestObj.dist )
+				{
+					closestObj = { m_id 	: id,
+								   m_dist 	: dist };
+				}
+
+				Logger.Info( 'Attack ' + this.m_world[ id ].m_type );
 			}
 		}
 
-		if ( interObjs.length > 0 )
+		if ( closestObj.m_id !== undefined )
 		{
-			for ( var i = 0; i < interObjs.length; ++i )
-				Logger.Info( 'Intersection detected with: ' + interObjs[ i ].m_id );
+			if ( this.m_world[ closestObj.m_id ].m_type === 'player' )
+			{
+				--this.m_world[ closestObj.m_id ].m_health;
+				this.m_updObjs[ closestObj.m_id ] = this.m_world[ closestObj.m_id ];
+			}
 
-			interObjs.sort( function( a_a, a_b )
-							{
-								return ( a_a.m_dist + Geometry.EPS < a_b.m_dist ? -1 : 1 );
-							} );
-
-			var interObj = interObjs[ 0 ];
-
-			if ( this.m_world[ interObj.m_id ].m_type === 'player' )
-				--this.m_world[ interObj.m_id ].m_health;
+			Logger.Info( 'Attack : ' + this.m_world[ closestObj.m_id ].m_type + ' Health = ' + this.m_world[ closestObj.m_id ].m_health );
 		}
-	}
-
-	this.CreateBullet = function ( a_playerId, a_pos, a_dir )
-	{
-		var pos = { m_x : a_pos.m_x + a_dir.m_x * Player.BARREL_LENGTH,
-					m_y : a_pos.m_y + a_dir.m_y * Player.BARREL_LENGTH
-				  }
-
-		var vel = { m_x : a_dir.m_x * Bullet.VEL,
-					m_y : a_dir.m_y * Bullet.VEL };
-
-		var bullet = { m_id     : this.GetUniqueId(),
-					   m_type   : 'bullet',
-					   m_pos    : pos,
-					   m_vel    : vel,
-					   m_ownId  : a_playerId,
-					   m_teamId : this.m_world[ a_playerId ].m_teamId };
-
-		this.m_world[ bullet.m_id ]   = bullet;
-		this.m_bullets[ bullet.m_id ] = true;
-		this.m_addObjs[ bullet.m_id ] = bullet;
 	}
 
 	//Debug

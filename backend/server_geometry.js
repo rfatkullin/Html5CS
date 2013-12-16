@@ -29,6 +29,37 @@ Geometry =
         return a_vecA.m_x * a_vecB.m_x + a_vecA.m_y * a_vecB.m_y;
     },
 
+    IsNullVec : function ( a_vec )
+    {
+        return Math.abs( this.ScalarMul( a_vec, a_vec ) ) < Constants.EPSILON;
+    },
+
+    NormalizeVector : function ( a_vec )
+    {
+        var normVec = jQuery.extend( false, {}, a_vec );
+        var len = Math.sqrt( normVec.m_x * normVec.m_x + normVec.m_y * normVec.m_y );
+
+        if ( !( len < Geometry.EPSILON ) )
+        {
+            normVec.m_x /= len;
+            normVec.m_y /= len;
+        }
+
+        return normVec;
+    },
+
+    GetVec : function ( a_p1, a_p2 )
+    {
+        var dirVec = { m_x : a_p2.m_x - a_p1.m_x,
+                       m_y : a_p2.m_y - a_p1.m_y };
+        return dirVec;
+    },
+
+    GetDirection : function ( a_p1, a_p2 )
+    {
+        return this.NormalizeVector( this.GetVec( a_p1, a_p2 ) );
+    },
+
     PointInRect : function( a_pos, a_rec )
     {
         var verts = a_rec.m_verts;
@@ -179,7 +210,7 @@ Geometry =
         var discr = b * b - 4 * a * c;
 
         if ( discr < -Constants.EPSILON )
-            return false;
+            return [];
 
         discr = Math.sqrt( discr );
 
