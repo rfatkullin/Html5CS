@@ -41,7 +41,8 @@ function MessageProcess( a_msg )
 			break;
 
 		case 'control' :
-			g_world.ProcessControl( currTime - this.m_ping - Game.INTER_TIME, this.m_playerId, a_msg.commands );
+			if ( g_world.PlayerAlive( this.m_playerId ) )
+				g_world.ProcessControl( currTime - this.m_ping - Game.INTER_TIME, this.m_playerId, a_msg.commands );
 			//Logger.Info( '[CL=' + this.m_playerId + ']:' + ' Received control.' );
 			break;
 
@@ -117,9 +118,17 @@ function SendSnapshots()
 
 		var sendSnapshot = g_world.GetSnapshotDiff( conn.m_lastAckSnapshot );
 
-		conn.send( JSON.stringify( { type	: 'update',
-									 tick 	: g_server.m_tick,
-									 world 	: sendSnapshot } ) );
+		try
+		{
+			conn.send( JSON.stringify( { type		: 'update',
+										 prevTick	: conn.m_lastAckSnapshot,
+										 tick 		: g_server.m_tick,
+										 world 		: sendSnapshot } ) );
+		}
+		catch ( a_excp )
+		{
+			Logger.Info( 'Can\'t send snapshot to [CL=' + conn.m_playerId + ']' );
+		}
 	}
 }
 
@@ -142,6 +151,19 @@ function UpdatePings()
 	}
 }
 
+function PrintPings()
+{
+        for ( var connId in g_server.m_conns )
+        {
+                conn = g_server.m_conns[ connId ];
+
+                if ( !conn.m_logined )
+                        continue;
+
+                Logger.Info( 'Ping for client ' + conn.m_playerId + ' = '  + conn.m_ping / 1000.0 );
+        }
+}
+
 function TickHandler()
 {
 	g_world.NextStep( GetTime(), TICKS_INTERVAL / MSECS_IN_SEC, g_server.m_tick );
@@ -162,6 +184,7 @@ function main()
 
 	setInterval( TickHandler, TICKS_INTERVAL );
 	setInterval( UpdatePings, PING_UPD_INTERVAL );
+	setInterval( PrintPings, 5000 );
 }
 
 main();

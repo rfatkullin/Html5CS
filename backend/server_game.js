@@ -388,10 +388,10 @@ var CreateWorld = function()
 			{
 				--this.m_world[ closestObj.m_id ].m_health;
 				this.m_updObjs[ closestObj.m_id ] = this.m_world[ closestObj.m_id ];
-			}
 
-			if ( this.m_world[ closestObj.m_id ].m_health <= 0 )
-				this.DeletePlayer( closestObj.m_id );
+				if ( this.m_world[ closestObj.m_id ].m_health <= 0 )
+					this.DeletePlayer( closestObj.m_id );
+			}
 		}
 	}
 
