@@ -1,7 +1,3 @@
-
-/// Server event handlers
-/// Begin
-
 function OnOpen()
 {
     InfLog( 'Connected to server.' );
@@ -26,39 +22,26 @@ function OnError( a_error )
 function OnMessage( a_msg )
 {
     a_msg = JSON.parse( a_msg.data );
-    var ans = {};
 
     switch ( a_msg.type )
     {
         case 'ping' :
-            ans = { type : 'pong' };
-            //InfLog( '[RECV]: Get ping.' );
+            g_webSocket.send( JSON.stringify( { type : 'pong' } ) );
             break;
         case 'login' :
             InfLog( '[RECV]: Get login: ' + a_msg.login );
             g_world.SetPlayerInfo( a_msg.login );
             g_client.m_start = true;
-            ans = { type : 'login_ack' };
             break;
 
         case 'update' :
             g_world.Update( a_msg, (new Date()).getTime() );
-            ans = { type : 'update_ack', tick : a_msg.tick };
-            //InfLog( '[RECV]: Get update for tick ' + a_msg.tick );
             break;
 
         default :
-            ErrLog( '[RECV]: Non-existent command: ' + a_msg.tick );
+            ErrLog( '[RECV]: Non-existent command.' );
     }
-
-    g_webSocket.send( JSON.stringify( ans ) );
 }
-
-/// Server event handlers
-/// End
-
-/// Client input handlers
-/// Begin
 
 function OnKeyDown( a_event )
 {
@@ -171,9 +154,6 @@ function ProcessInput()
         g_webSocket.send( JSON.stringify( { type : 'control', commands : commands } ) );
 }
 
-/// Client input handlers
-/// End
-
 function OnLoad()
 {
     canvas = document.getElementById( 'game-canvas' );
@@ -223,8 +203,8 @@ function Connect( a_button )
     else
         g_webSocket.close();
 
-    //g_webSocket = new WebSocket( 'ws://localhost:1024' );
-    g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
+    g_webSocket = new WebSocket( 'ws://localhost:1024' );
+    //g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
 
     if ( g_webSocket === undefined )
         alert( 'WebSockets not supported' );

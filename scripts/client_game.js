@@ -118,21 +118,19 @@ function World()
 			//Snapshot is lost -> extrapolating
 			//Extrapolation();
 			//InfLog( 'Snapshots lost. Extraploation.' + 'Last snapshot time: ' + this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp + ' Render time: ' + renderTime );
+			InfLog( 'Extraploation.' );
 			return false;
 		}
 
 		for ( var i = lastSnapshotInd; i > 0; --i )
 		{
-			if ( renderTime <= this.m_snapshotObjList[ i ].m_timeStamp )
+			for ( var j = i - 1; j >= 0; --j )
 			{
-				for ( var j = i - 1; j >= 0; --j )
+				if ( ( this.m_snapshotObjList[ j ].m_timeStamp <= renderTime ) && ( renderTime <= this.m_snapshotObjList[ i ].m_timeStamp ) )
 				{
-					if ( this.m_snapshotObjList[ j ].m_tick === this.m_snapshotObjList[ i ].m_prevTick )
-					{
-						leftBound  = j;
-						rightBound = i;
-						break;
-					}
+					leftBound  = j;
+					rightBound = i;
+					break;
 				}
 			}
 		}
@@ -219,9 +217,7 @@ function World()
 		{
 			this.m_snapshotObjList = [];
 
-			this.m_snapshotObjList.push( { 	m_prevTick  : a_updObj.prevTick,
-											m_tick      : a_updObj.tick,
-									   		m_timeStamp : a_timeStamp,
+			this.m_snapshotObjList.push( { 	m_timeStamp : a_timeStamp,
 									   		m_snapshot  : a_updObj.world.snapshot,
 									   		m_updated	: {},
 									   		m_deleted	: {} } );
@@ -252,14 +248,12 @@ function World()
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
 
-		this.m_snapshotObjList.push( { m_prevTick  : a_updObj.prevTick,
-									   m_tick      : a_updObj.tick,
-									   m_timeStamp : a_timeStamp,
+		this.m_snapshotObjList.push( { m_timeStamp : a_timeStamp,
 									   m_snapshot  : newSnapshot,
 									   m_updated   : Object.keys( diffObj.m_updObjs ),
 									   m_deleted   : Object.keys( diffObj.m_delObjs ) } );
 
-		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
+		InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
 	Init.call( this );

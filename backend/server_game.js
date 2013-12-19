@@ -189,7 +189,7 @@ var CreateWorld = function()
 			this.MovePlayer( this.m_world[ id ], a_expiredTime );
 	}
 
-	this.SnapshotWorld = function ( a_currTime, a_currTick )
+	this.SnapshotWorld = function ( a_currTime )
 	{
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
@@ -198,7 +198,7 @@ var CreateWorld = function()
 			delete this.m_world[ id ];
 
 		this.m_snapshotObjList.push( {  m_time	   : a_currTime,
-										m_tick 	   : a_currTick,
+										m_tick 	   : this.m_tick,
 										m_addObjs  : jQuery.extend( true, {}, this.m_addObjs ),
 										m_updObjs  : jQuery.extend( true, {}, this.m_updObjs ),
 										m_delObjs  : jQuery.extend( true, {}, this.m_delObjs ),
@@ -209,56 +209,25 @@ var CreateWorld = function()
 		this.m_delObjs	= {};
 	}
 
-	this.NextStep = function ( a_currTime, a_expiredTime, a_currTick )
+	this.NextStep = function ( a_currTime, a_expiredTime )
 	{
+		++this.m_tick;
 		this.MovePlayers( a_expiredTime );
-		this.SnapshotWorld( a_currTime, a_currTick );
+		this.SnapshotWorld( a_currTime );
 	}
 
-	this.GetSnapshotDiff = function ( a_startTick )
+	this.GetWholeWorld = function ()
 	{
-		var firstInd  = -1;
-		var secondInd = this.m_snapshotObjList.length - 1;
+		return this.m_snapshotObjList[ this.m_snapshotObjList.length - 1 ].m_snapshot;
+	}
 
-		var i = secondInd - 1;
+	this.GetSnapshotDiff = function ()
+	{
+		var lastInd = this.m_snapshotObjList.length - 1;
 
-		while ( ( i >= 0 ) && ( firstInd < 0 ) )
-		{
-			if ( this.m_snapshotObjList[ i ].m_tick === a_startTick )
-				firstInd = i;
-
-			--i;
-		}
-
-		if ( firstInd < 0 )
-			return { isDiff : false, snapshot : this.m_snapshotObjList[ secondInd ].m_snapshot };
-
-		var addObjs = {};
-		var updObjs = {};
-		var delObjs = {};
-
-		for ( var i = firstInd + 1; i <= secondInd; ++i )
-		{
-			jQuery.extend( true, addObjs, this.m_snapshotObjList[ i ].m_addObjs );
-			jQuery.extend( true, updObjs, this.m_snapshotObjList[ i ].m_updObjs );
-			jQuery.extend( true, delObjs, this.m_snapshotObjList[ i ].m_delObjs );
-		}
-
-		for ( var id in delObjs )
-		{
-			if ( id in addObjs )
-			{
-				delete delObjs[ id ];
-				delete addObjs[ id ];
-				delete updObjs[ id ];
-			}
-		}
-
-		var diff = { m_addObjs : addObjs,
-					 m_updObjs : updObjs,
-					 m_delObjs : delObjs }
-
-		return { isDiff : true, diff : diff };
+		return { m_addObjs : this.m_snapshotObjList[ lastInd ].m_addObjs,
+				 m_updObjs : this.m_snapshotObjList[ lastInd ].m_updObjs,
+				 m_delObjs : this.m_snapshotObjList[ lastInd ].m_delObjs };
 	}
 
 	this.AddNewPlayer = function ( a_userId )
@@ -395,23 +364,9 @@ var CreateWorld = function()
 		}
 	}
 
-	//Debug
-	this.TestIntersections = function ()
-	{
-		var wall = new Geometry.Rectangle( { m_x : 2.0, m_y : 2.0 }, 2.0, 2.0 );
-		var res =  Geometry.RayRecIntersect( { m_x : 6.0, m_y : 4.0 }, { m_x : -1.0, m_y : 1.0 }, wall );
-
-		//res =  Geometry.RayCircleIntersect( { m_x : 5.0, m_y : 1.0 }, { m_x : 0.0, m_y : 1.0 }, { m_x : 5.0, m_y : 7.0 }, 3.0 );
-
-		//var res = Geometry.CircleRecIntersect( { m_x : 1.0, m_y : 1.0 }, 1.0, wall  )
-
-
-		if ( res.m_intersect )
-			Logger.Info( 'Intersection : ' + JSON.stringify( res ) );
-	}
-	//Debug
-
+	//For unique keys
 	this.m_currObjId		= 0;
+	this.m_tick				= 0;
 	this.m_playersCnt		= 0;
 	this.m_playerCommands	= {};
 	this.m_world    		= {};
@@ -423,7 +378,7 @@ var CreateWorld = function()
 
 	this.m_walls 			= {};
 	this.m_players 			= {};
-	this.m_bullets 			= {};
+
 
 	this.GenerateMap();
 	this.InitTeams();
