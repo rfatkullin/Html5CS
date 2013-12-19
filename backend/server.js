@@ -164,7 +164,7 @@ function PrintPings()
 
 function TickHandler()
 {
-	g_world.NextStep( GetTime(), TICKS_INTERVAL / MSECS_IN_SEC );
+	g_world.NextStep( GetTime(), TICKS_INTERVAL / Game.MSECS_IN_SEC );
 
 	SendSnapshots();
 }
@@ -172,7 +172,6 @@ function TickHandler()
 function main()
 {
 	TICKS_INTERVAL 	  = 30;    // 30 msec.
-	MSECS_IN_SEC	  = 1000;
 	PING_UPD_INTERVAL = 10000 // 1 minute
 
 	g_world  = new GameModule.CreateWorld();

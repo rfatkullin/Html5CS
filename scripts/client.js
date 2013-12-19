@@ -203,8 +203,8 @@ function Connect( a_button )
     else
         g_webSocket.close();
 
-    g_webSocket = new WebSocket( 'ws://localhost:1024' );
-    //g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
+    //g_webSocket = new WebSocket( 'ws://localhost:1024' );
+    g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
 
     if ( g_webSocket === undefined )
         alert( 'WebSockets not supported' );

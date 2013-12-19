@@ -115,11 +115,9 @@ function World()
 
 		if (  this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp < renderTime )
 		{
-			//Snapshot is lost -> extrapolating
-			//Extrapolation();
-			//InfLog( 'Snapshots lost. Extraploation.' + 'Last snapshot time: ' + this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp + ' Render time: ' + renderTime );
+			this.Extrapolate( renderTime );
 			InfLog( 'Extraploation.' );
-			return false;
+			return true;
 		}
 
 		for ( var i = lastSnapshotInd; i > 0; --i )
@@ -144,6 +142,25 @@ function World()
 		this.Interpolate( leftBound, rightBound, renderTime );
 
 		return true;
+	}
+
+	this.Extrapolate = function ( a_renderTime )
+	{
+		var lastSnapshotObj = this.m_snapshotObjList[ this.m_snapshotObjList.length - 1 ];
+		var expiredTime = ( a_renderTime - lastSnapshotObj.m_timeStamp ) / Game.MSECS_IN_SEC;
+		this.m_renderWorld = jQuery.extend( true, {}, lastSnapshotObj.m_snapshot );
+
+		for ( var id in this.m_renderWorld )
+		{
+			var currObj = this.m_renderWorld[ id ];
+			if ( currObj.m_type === 'player' )
+			{
+				currObj.m_pos = { m_x : currObj.m_pos.m_x + expiredTime * Player.VEL * currObj.m_moveDir.m_x,
+							      m_y : currObj.m_pos.m_y + expiredTime * Player.VEL * currObj.m_moveDir.m_y };
+
+				InfLog( 'Curr pos: ' + JSON.stringify( currObj ) );
+			}
+		}
 	}
 
 	this.InterpolatePos = function ( a_startPos, a_endPos, a_factor )
@@ -193,8 +210,6 @@ function World()
 		for ( i = 0; i < rightSnapShotObj.m_updated.length; ++i )
 		{
 			var upId = rightSnapShotObj.m_updated[ i ];
-			//InfLog( 'Update object with id ' + upId + ' Left object ' + JSON.stringify( leftSnapShotObj )  );
-			//InfLog( 'Update object with id ' + upId + ' Right object ' + JSON.stringify( rightSnapShotObj ) );
 
 			this.m_renderWorld[ upId ].m_pos = this.InterpolatePos( leftSnapShotObj.m_snapshot[ upId ].m_pos,
 																	rightSnapShotObj.m_snapshot[ upId ].m_pos,
@@ -206,8 +221,6 @@ function World()
 			 	   				 			   							rightSnapShotObj.m_snapshot[ upId ].m_dir,
 			 	 				 			   							factor );
 			}
-
-			//InfLog( 'Update object : id = ' + upId + ' type = ' + this.m_renderWorld[ upId ].m_type + ' Pos : ' + JSON.stringify( this.m_renderWorld[ upId ] ) +  '.' );
 		}
 	}
 

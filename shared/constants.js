@@ -13,7 +13,8 @@
     			HEALTH_IND_OFFS :  5
     		 };
 
-    Game   = { 	INTER_TIME 		: 75 };
+    Game   = { 	INTER_TIME   : 75,
+    			MSECS_IN_SEC : 1000 };
 
 	Geometry = { EPSILON : 0.000000001 };
 

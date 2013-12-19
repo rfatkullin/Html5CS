@@ -293,6 +293,9 @@ var CreateWorld = function()
 			}
 		}
 
+		if ( ( leftBound < 0 ) || ( rightBound < 0 ) )
+			return undefined;
+
 		if ( ( a_time - this.m_snapshotObjList[ leftBound ].m_time ) <= ( this.m_snapshotObjList[ rightBound ].m_time - a_time ) )
 			return this.m_snapshotObjList[ leftBound ].m_snapshot;
 
@@ -302,6 +305,10 @@ var CreateWorld = function()
 	this.ProcessAttack = function ( a_time, a_playerId, a_pos, a_point )
 	{
 		var world 		= this.GetWorldByTime( a_time );
+
+		if ( world === undefined )
+			return;
+
 		var player 		= world[ a_playerId ];
 		var interObjs	= [];
 		var res 		= { m_intersect : false };
