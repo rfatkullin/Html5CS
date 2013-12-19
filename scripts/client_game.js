@@ -113,10 +113,10 @@ function World()
 			return false;
 		}
 
-		if (  this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp < renderTime )
+		if ( this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp < renderTime )
 		{
 			this.Extrapolate( renderTime );
-			InfLog( 'Extraploation.' );
+			InfLog( 'Extraploation: ' + ( renderTime - this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp ) / Game.MSECS_IN_SEC );
 			return true;
 		}
 
@@ -157,8 +157,6 @@ function World()
 			{
 				currObj.m_pos = { m_x : currObj.m_pos.m_x + expiredTime * Player.VEL * currObj.m_moveDir.m_x,
 							      m_y : currObj.m_pos.m_y + expiredTime * Player.VEL * currObj.m_moveDir.m_y };
-
-				InfLog( 'Curr pos: ' + JSON.stringify( currObj ) );
 			}
 		}
 	}
@@ -224,18 +222,18 @@ function World()
 		}
 	}
 
-	this.Update = function ( a_updObj, a_timeStamp )
+	this.Update = function ( a_updObj )
 	{
 		if ( !a_updObj.world.isDiff )
 		{
 			this.m_snapshotObjList = [];
 
-			this.m_snapshotObjList.push( { 	m_timeStamp : a_timeStamp,
+			this.m_snapshotObjList.push( { 	m_timeStamp : ( new Date() ).getTime(),
 									   		m_snapshot  : a_updObj.world.snapshot,
 									   		m_updated	: {},
 									   		m_deleted	: {} } );
 
-			InfLog( 'New world : ' + JSON.stringify( a_updObj.world.snapshot ) );
+			//InfLog( 'New world : ' + JSON.stringify( a_updObj.world.snapshot ) );
 
 			return;
 		}
@@ -261,12 +259,12 @@ function World()
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
 
-		this.m_snapshotObjList.push( { m_timeStamp : a_timeStamp,
+		this.m_snapshotObjList.push( { m_timeStamp : ( new Date() ).getTime(),
 									   m_snapshot  : newSnapshot,
 									   m_updated   : Object.keys( diffObj.m_updObjs ),
 									   m_deleted   : Object.keys( diffObj.m_delObjs ) } );
 
-		InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
+		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
 	Init.call( this );

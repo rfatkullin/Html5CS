@@ -62,7 +62,7 @@ function GameServerWrapper()
 	var server 					= new webSocketServer( { port : WEB_SOCKET_SERVER_PORT } );
 	this.m_conns  				= {};
 	this.m_usersCnt				= 0;
-
+	this.m_prevTime				= GetTime();
 	this.AddConn = function ( a_conn )
 	{
 		var connId 					= g_world.GetUniqueId();
@@ -73,6 +73,15 @@ function GameServerWrapper()
 		a_conn.m_isNewConn			= true;
 		this.m_conns[ connId ] 		= a_conn;
 		++this.m_usersCnt;
+	}
+
+	this.GetExpiredTime = function ()
+	{
+		var currTime 	= GetTime();
+		var expired  	= currTime - this.m_prevTime;
+		this.m_prevTime = currTime;
+
+		return expired / Game.MSECS_IN_SEC;
 	}
 
 	server.on( 'connection', function( a_ws )
@@ -132,8 +141,15 @@ function SendSnapshots()
 
 function SendPing( a_ws )
 {
-	a_ws.m_pingStartTime = GetTime();
-	a_ws.send( JSON.stringify( { type : 'ping' } ) );
+	try
+	{
+		a_ws.m_pingStartTime = GetTime();
+		a_ws.send( JSON.stringify( { type : 'ping' } ) );
+	}
+	catch ( a_excp )
+	{
+
+	}
 }
 
 function UpdatePings()
@@ -141,6 +157,10 @@ function UpdatePings()
 	for ( var connId in g_server.m_conns )
 	{
 		conn = g_server.m_conns[ connId ];
+
+		if ( !conn.m_logined )
+			continue;
+
 
 		if ( !conn.m_logined )
 			continue;
@@ -164,7 +184,7 @@ function PrintPings()
 
 function TickHandler()
 {
-	g_world.NextStep( GetTime(), TICKS_INTERVAL / Game.MSECS_IN_SEC );
+	g_world.NextStep( GetTime(), g_server.GetExpiredTime() );
 
 	SendSnapshots();
 }
@@ -172,14 +192,14 @@ function TickHandler()
 function main()
 {
 	TICKS_INTERVAL 	  = 30;    // 30 msec.
-	PING_UPD_INTERVAL = 10000 // 1 minute
+	PING_UPD_INTERVAL = 1000 // 1 minute
 
 	g_world  = new GameModule.CreateWorld();
 	g_server = new GameServerWrapper();
 
 	setInterval( TickHandler, TICKS_INTERVAL );
 	setInterval( UpdatePings, PING_UPD_INTERVAL );
-	setInterval( PrintPings, 5000 );
+	setInterval( PrintPings, 1000 );
 }
 
 main();

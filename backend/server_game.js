@@ -99,7 +99,8 @@ var CreateWorld = function()
 	this.ChangePlayerMoveDir = function ( a_playerId, a_moveDir )
 	{
 		this.m_world[ a_playerId ].m_moveDir = a_moveDir;
-		Logger.Info( 'Change [' + a_playerId + '] player dir to ' + JSON.stringify( a_moveDir ) );
+		this.m_updObjs[ a_playerId ] 		 = this.m_world[ a_playerId ];
+		//Logger.Info( 'Change [' + a_playerId + '] player dir to ' + JSON.stringify( a_moveDir ) );
 	}
 
 	this.ChangePlayerDirPoint = function ( a_playerId, a_dirPoint )
@@ -180,7 +181,7 @@ var CreateWorld = function()
 
 		this.ChangePlayerDir( a_player );
 
-		Logger.Info( 'Shift [' + a_player.m_id + '] on vec ' + JSON.stringify( shift ) );
+		//Logger.Info( 'Shift [' + a_player.m_id + '] on vec ' + JSON.stringify( shift ) );
 	}
 
 	this.MovePlayers = function ( a_expiredTime )
@@ -304,7 +305,7 @@ var CreateWorld = function()
 
 	this.ProcessAttack = function ( a_time, a_playerId, a_pos, a_point )
 	{
-		var world 		= this.GetWorldByTime( a_time );
+		var world = this.GetWorldByTime( a_time );
 
 		if ( world === undefined )
 			return;

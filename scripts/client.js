@@ -5,6 +5,7 @@ function OnOpen()
 
 function OnClose()
 {
+   g_client.m_start = false;
     InfLog( 'Close connection.' );
 }
 
@@ -17,6 +18,8 @@ function OnError( a_error )
     }
     else
         ErrLog( a_error.data );
+
+    g_client.m_start = false;
 }
 
 function OnMessage( a_msg )
@@ -35,7 +38,7 @@ function OnMessage( a_msg )
             break;
 
         case 'update' :
-            g_world.Update( a_msg, (new Date()).getTime() );
+            g_world.Update( a_msg );
             break;
 
         default :
@@ -158,9 +161,9 @@ function OnLoad()
 {
     canvas = document.getElementById( 'game-canvas' );
 
-    canvas.onmousemove = OnMouseMove;
-    canvas.onclick     = OnClick;
-    canvas.onkeyup     = OnKeyUp;
+    //canvas.onmousemove = OnMouseMove;
+    //canvas.onclick     = OnClick;
+    //canvas.onkeyup     = OnKeyUp;
 
     if ( !canvas )
         alert( '[Error]: Can\'t find canvas element on page!' );
@@ -222,10 +225,9 @@ function NextState()
     if ( !g_client.m_start )
         return;
 
+    ProcessInput();
     g_world.Draw();
     g_cursor.Draw();
-
-    ProcessInput();
 }
 
 function DrawGameField()
