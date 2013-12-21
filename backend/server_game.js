@@ -119,45 +119,80 @@ var CreateWorld = function()
 		this.m_updObjs[ a_player.m_id ] = a_player;
 	}
 
+	this.CalcIterForWall = function ( a_player, a_wall, a_shift )
+	{
+		var iter = Collide.ITER_CNT + 1;
+
+		do
+    	{
+            --iter;
+            var factor = iter / Collide.ITER_CNT;
+            var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+                           m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
+
+            res =  Geometry.CircleRecIntersect( newPos, Player.RAD, a_wall );
+        }
+        while ( ( res.m_intersect !== false ) && ( res.m_pointsCnt > 1 ) && ( iter > 0 ) )
+
+        return iter;
+	}
+
+	this.CalcIterForPlayer = function ( a_player, a_otherPos, a_shift )
+	{
+		var safeDist = Math.pow( 2 * Player.RAD, 2 );
+		var iter = Collide.ITER_CNT + 1;
+
+		do
+		{
+			--iter;
+
+			var factor = iter / Collide.ITER_CNT;
+			var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
+				   		   m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
+
+			var distSqr = Geometry.DistSqr( newPos, a_otherPos );
+
+			if ( ( Math.abs( safeDist - distSqr ) < EPSILON ) || ( distSqr > safeDist + EPSILON ) )
+				break;
+		}
+		while ( iter > 0 );
+
+		return iter;
+	}
+
 	this.MovePlayerByOneAxis = function ( a_player, a_shift )
 	{
 		var maxIter = Collide.ITER_CNT;
+		var iter = maxIter;
 
-		for ( var wallId in this.m_walls )
+		for ( var id in this.m_world )
 		{
-			var wall 			= this.m_walls[ wallId ];
-			var res  			= {};
-			var iter 			= Collide.ITER_CNT + 1;
-			var intersPointCnt 	= 0;
-			do
-			{
-				--iter;
-				intersPointCnt 	= 0;
-				var factor = iter / Collide.ITER_CNT;
-				var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
-					   		   m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
+			var intId = parseInt( id );
 
-				res =  Geometry.CircleRecIntersect( newPos, Player.RAD, wall );
-
-				if ( res.m_intersect )
-				{
-					//Logger.Info( 'Wall : ' + wallId + '. Intersection detected. Iter : ' + iter + '. Points count : ' + res.m_pointsCnt );
-					intersPointCnt = res.m_pointsCnt;
-				}
-			}
-			while ( ( res.m_intersect !== false ) && ( intersPointCnt > 1 ) && ( iter > 1 ) )
-
-			if ( iter <= 1 )
+			switch ( this.m_world[ id ].m_type )
 			{
-				//Одна стена мешает перемещению - игрок остается на месте
-				return;
+				case 'wall' :
+					iter = this.CalcIterForWall( a_player, this.m_walls[ id ], a_shift );
+					break;
+
+				case 'player' :
+					if ( a_player.m_id === intId )
+						continue;
+					iter = this.CalcIterForPlayer( a_player, this.m_world[ id ].m_pos, a_shift );
+					break;
+
+				default :
+					//beda
+					break;
 			}
-			else
-			{
-				//Собираем все "допустимые перемещения", из которых потом выберем наименьшее - случай, когда игрок находится вбилизи двух стен
-				maxIter = Math.min( maxIter, iter );
-			}
+
+			maxIter = Math.min( maxIter, iter );
 		}
+
+		maxIter = Math.min( maxIter, this.CalcIterForWall( a_player, this.m_boundWall, a_shift ) );
+
+		if ( maxIter <= 0 )
+			return;
 
 		var factor 	 = maxIter / Collide.ITER_CNT;
 		a_player.m_pos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
@@ -392,7 +427,7 @@ var CreateWorld = function()
 	this.InitTeams();
 
 	//Ограничивающий прямоугольник
-	this.m_walls[ this.GetUniqueId() ] = new Geometry.Rectangle( { m_x : MAP_WIDTH / 2.0, m_y : MAP_HEIGHT / 2.0 }, MAP_WIDTH, MAP_HEIGHT );
+	this.m_boundWall = new Geometry.Rectangle( { m_x : MAP_WIDTH / 2.0, m_y : MAP_HEIGHT / 2.0 }, MAP_WIDTH, MAP_HEIGHT );
 
 }
 

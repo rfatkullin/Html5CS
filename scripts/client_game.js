@@ -6,17 +6,6 @@ function World()
 	var wallColor			= [ 0.5, 0.0, 1.0, 1.0 ];
 	var healthColor			= [ 0.0, 0.5, 0.0, 1.0 ];
 
-	var Init = function ()
-	{
-		SNAPSHOTS_CNT = 66;
-
-		this.m_snapshotObjList 	= [];
-	    this.m_state 			= { start : false, login : undefined };
-	    this.m_playerId			= -1;
-	    this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
-	    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
-	}
-
 	this.SetPlayerInfo = function ( a_id )
 	{
 		this.m_playerId = a_id;
@@ -117,6 +106,9 @@ function World()
 		{
 			this.Extrapolate( renderTime );
 			InfLog( 'Extraploation: ' + ( renderTime - this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp ) / Game.MSECS_IN_SEC );
+			this.m_lastExtrapolVal = ( renderTime - this.m_snapshotObjList[ lastSnapshotInd ].m_timeStamp ) / Game.MSECS_IN_SEC;
+			this.m_extrapolVal += this.m_lastExtrapolVal;
+			++this.m_extrapolCount;
 			return true;
 		}
 
@@ -222,6 +214,22 @@ function World()
 		}
 	}
 
+	this.GetExtrapolationInfo = function ()
+	{
+		var aver = 0;
+		var last = 0;
+
+		if ( this.m_extrapolCount !== 0 )
+			aver = this.m_extrapolVal / this.m_extrapolCount;
+
+		last = this.m_lastExtrapolVal;
+
+		this.m_extrapolVal = 0;
+		this.m_extrapolCount = 0;
+
+		return { m_aver : aver, m_last : last };
+	}
+
 	this.Update = function ( a_updObj )
 	{
 		if ( !a_updObj.world.isDiff )
@@ -256,7 +264,7 @@ function World()
 		for ( var addId in diffObj.m_addObjs )
 			newSnapshot[ addId ] = diffObj.m_addObjs[ addId ];
 
-		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
+		if ( this.m_snapshotObjList.length > this.SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
 
 		this.m_snapshotObjList.push( { m_timeStamp : ( new Date() ).getTime(),
@@ -267,5 +275,14 @@ function World()
 		//InfLog( 'With diff : ' + JSON.stringify( diffObj ) + ' Keys : ' + JSON.stringify( Object.keys( diffObj.m_updObjs ) ) );
 	}
 
-	Init.call( this );
+	this.SNAPSHOTS_CNT = 66;
+
+	this.m_snapshotObjList 	= [];
+    this.m_state 			= { start : false, login : undefined };
+    this.m_playerId			= -1;
+    this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
+    this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
+    this.m_extrapolVal 		= 0;
+    this.m_extrapolCount 	= 0;
+    this.m_lastExtrapolVal  = 0;
 }

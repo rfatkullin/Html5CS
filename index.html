@@ -26,7 +26,7 @@
         </style>
 	</head>
 
-	<body onload='OnLoad()' onkeydown='OnKeyDown(event)' onkeyup='OnKeyUp(event)' onmousemove='OnMouseMove(event)' onclick='OnClick(event)' onkeyup='OnKeyUp(event)'>
+	<body onload='OnLoad()' onkeydown='OnKeyDown(event)' onkeyup='OnKeyUp(event)' onmousemove='OnMouseMove(event)' onclick='OnClick(event)' onkeyup='OnKeyUp(event)' onmousedown='OnMouseDown(event)'>
     <!--<body onLoad='DebugMode()'>-->
 
         <script id='shader_vertex' type='x-shader/x-vertex'>
@@ -61,6 +61,9 @@
             <canvas id='game-canvas' width='800' height='600'>
     			Your browser does not support HTML5 Canvas.
     		</canvas>
+
+            <p align='left' id='aver_extrapolation'>Среднее время экстраполяции за последние 3 сек : 0 сек</p>
+            <p align='left' id='last_extrapolation'>Последняя экстраполяции: на 0 сек</p>
 	</body>
 
 </html>

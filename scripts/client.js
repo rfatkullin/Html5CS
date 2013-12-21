@@ -91,6 +91,20 @@ function OnMouseMove( a_event )
     g_cursor.SetPos( g_client.m_mouseLastPos );
 }
 
+function OnMouseDown( a_event )
+{
+    if ( a_event.preventDefault )
+    {
+        a_event.preventDefault();
+        a_event.stopPropagation();
+    }
+    else
+    {
+        a_event.returnValue = false;
+        a_event.cancelBubble = true;
+    }
+}
+
 function OnClick( a_event )
 {
     if ( !g_client.m_start )
@@ -157,13 +171,17 @@ function ProcessInput()
         g_webSocket.send( JSON.stringify( { type : 'control', commands : commands } ) );
 }
 
+function UpdateExtrapolation()
+{
+    var info = g_world.GetExtrapolationInfo();
+
+    document.getElementById( 'aver_extrapolation' ).innerHTML = 'Среднее время экстраполяции за последние 3 сек: ' + info.m_aver + ' сек';
+    document.getElementById( 'last_extrapolation' ).innerHTML = 'Последняя экстраполяции: на ' + info.m_last + ' сек';
+}
+
 function OnLoad()
 {
     canvas = document.getElementById( 'game-canvas' );
-
-    //canvas.onmousemove = OnMouseMove;
-    //canvas.onclick     = OnClick;
-    //canvas.onkeyup     = OnKeyUp;
 
     if ( !canvas )
         alert( '[Error]: Can\'t find canvas element on page!' );
@@ -197,6 +215,7 @@ function OnLoad()
     g_shiftPlayer       = false;
 
     setInterval( NextState, 20 );
+    setInterval( UpdateExtrapolation, 3000 );
 }
 
 function Connect( a_button )
@@ -205,6 +224,9 @@ function Connect( a_button )
         a_button.value = 'Reconnect';
     else
         g_webSocket.close();
+
+    g_client = new GameClient();
+    g_world  = new World();
 
     //g_webSocket = new WebSocket( 'ws://localhost:1024' );
     g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
