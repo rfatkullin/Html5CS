@@ -12,7 +12,7 @@ var CreateWorld = function()
 	var SNAPSHOTS_CNT 	= 66; // 2 sec
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
-	var ITER_CNT 		= 20
+	var ITER_CNT		= 20;
 
 	this.NewWall = function ( a_pos )
 	{
@@ -54,9 +54,6 @@ var CreateWorld = function()
 
 	this.InitTeams = function ()
 	{
-		TeamsDeployPos = [ { m_x : 50, 			m_y : MAP_HEIGHT / 2 },
-						   { m_x : MAP_WIDTH - 100, m_y : MAP_HEIGHT / 2 } ];
-
 		TeamsDir 	   = [ { m_x :  1, m_y : 0 },
 						   { m_x : -1, m_y : 0 } ];
 	}
@@ -297,7 +294,10 @@ var CreateWorld = function()
 			this.m_snapshotObjList.shift();
 
 		for ( var id in this.m_delObjs )
+		{
 			delete this.m_world[ id ];
+			delete this.m_updObjs[ id ];
+		}
 
 		for ( var id in this.m_addObjs )
 			delete this.m_updObjs[ id ];
