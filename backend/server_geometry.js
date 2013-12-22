@@ -1,6 +1,5 @@
-var jQuery    = require( 'jquery' );
-var Constants = require( '../shared/constants' ).Geometry;
-var Collide   = require( '../shared/constants' ).Collide;
+var jQuery  = require( 'jquery' );
+var EPSILON = require( '../shared/constants' ).EPSILON;
 
 Geometry =
 {
@@ -31,7 +30,7 @@ Geometry =
 
     IsNullVec : function ( a_vec )
     {
-        return Math.abs( this.ScalarMul( a_vec, a_vec ) ) < Constants.EPSILON;
+        return Math.abs( this.ScalarMul( a_vec, a_vec ) ) < EPSILON;
     },
 
     NormalizeVector : function ( a_vec )
@@ -75,7 +74,7 @@ Geometry =
             var testVec = { m_x : a_pos.m_x - verts[ i ],
                             m_y : a_pos.m_y - verts[ i + 1 ] }
 
-            if ( this.ScalarMul( currVec, testVec ) < Constants.EPSILON )
+            if ( this.ScalarMul( currVec, testVec ) < EPSILON )
                 return false;
         }
 
@@ -87,7 +86,7 @@ Geometry =
         var vec = { m_x : a_pos.m_x - m_center.m_x,
                     m_y : a_pos.m_y - m_center.m_y };
 
-        return vec.m_x * vec.m_x + vec.m_y * vec.m_y + Constants.EPSILON <= a_rad;
+        return vec.m_x * vec.m_x + vec.m_y * vec.m_y + EPSILON <= a_rad;
     },
 
     Rectangle : function( a_pos, a_width, a_height )
@@ -131,36 +130,37 @@ Geometry =
 
     InInterval : function ( a_begin, a_end, a_target )
     {
-        return ( a_begin + Constants.EPSILON < a_target ) && ( a_target + Constants.EPSILON < a_end );
+        return ( a_begin + EPSILON < a_target ) && ( a_target + EPSILON < a_end );
     },
 
     InSegment : function ( a_begin, a_end, a_target )
     {
-        return ( Math.abs( a_target - a_begin ) < Constants.EPSILON ) || ( Math.abs( a_target - a_end ) < Constants.EPSILON ) || this.InInterval( a_begin, a_end, a_target );
+        return ( Math.abs( a_target - a_begin ) < EPSILON ) || ( Math.abs( a_target - a_end ) < EPSILON ) || this.InInterval( a_begin, a_end, a_target );
     },
 
-    RaySegIntersect : function ( a_rayBegin, a_rayDir, a_segStart, a_segVec )
+    SegAndSegIntersect : function ( a_aSegBegin, a_aSegVec, a_bSegBegin, a_bSegVec )
     {
-        var segRayVec = { m_x : a_rayBegin.m_x - a_segStart.m_x,
-                          m_y : a_rayBegin.m_y - a_segStart.m_y };
+        var segRayVec = { m_x : a_aSegBegin.m_x - a_bSegBegin.m_x,
+                          m_y : a_aSegBegin.m_y - a_bSegBegin.m_y };
 
-        mul1 = this.PseudoScalarMul( a_segVec, a_rayDir );
+        mul1 = this.PseudoScalarMul( a_bSegVec, a_aSegVec );
 
-        if ( Math.abs( mul1 ) < Constants.EPSILON )
-            return { m_alpha : -1.0, m_betta : -1.0 };
+        if ( Math.abs( mul1 ) < EPSILON )
+            return { m_intersect : false };
 
-        mul2 = this.PseudoScalarMul( segRayVec, a_rayDir  );
+        mul2 = this.PseudoScalarMul( segRayVec, a_aSegVec  );
 
         var betta = mul2 / mul1;
-        var alpha = this.PseudoScalarMul( segRayVec, a_segVec ) / mul1;
+        var alpha = this.PseudoScalarMul( segRayVec, a_bSegVec ) / mul1;
 
-        if ( this.InSegment( 0.0, 1.0, betta  ) && ( ( Math.abs( alpha ) < Constants.EPSILON ) || ( alpha > Constants.EPSILON ) ) )
-            return { m_alpha : alpha, m_betta : betta };
+        if ( this.InSegment( 0.0, 1.0, betta ) && this.InSegment( 0.0, 1.0, alpha ) )
+            return { m_intersect : true, m_alpha : alpha, m_betta : betta };
 
-        return { m_alpha : -1.0, m_betta : -1.0 };
+        return { m_intersect : false };
     },
 
-    RayRecIntersect : function ( a_rayBegin, a_rayDir, a_rec )
+    //Возвращает наиболее близкую к началу отрезка точку
+    SegRecIntersect : function ( a_segBegin, a_segVec, a_rec )
     {
         var intersected  = false;
         var closestAlpha = -1.0;
@@ -172,19 +172,19 @@ Geometry =
             segBegin = { m_x : a_rec.m_verts[ i ],
                          m_y : a_rec.m_verts[ i + 1 ] };
 
-            segDir   = { m_x : a_rec.m_verts[ nextInd ]     - a_rec.m_verts[ i ],
+            segVec   = { m_x : a_rec.m_verts[ nextInd ]     - a_rec.m_verts[ i ],
                          m_y : a_rec.m_verts[ nextInd + 1 ] - a_rec.m_verts[ i + 1 ] };
 
-            res = this.RaySegIntersect( a_rayBegin, a_rayDir, segBegin, segDir );
+            res = this.SegAndSegIntersect( a_segBegin, a_segVec, segBegin, segVec );
 
-            if ( this.InSegment( 0.0, 1.0, res.m_betta ) && ( ( Math.abs( res.m_alpha ) < Constants.EPSILON ) || ( res.m_alpha > Constants.EPSILON ) ) )
+            if ( res.m_intersect === true )
             {
                 if ( !intersected )
                 {
                     closestAlpha = res.m_alpha;
                     intersected = true;
                 }
-                else if ( res.m_alpha + Constants.EPSILON < closestAlpha )
+                else if ( res.m_alpha + EPSILON < closestAlpha )
                     closestAlpha = res.m_alpha;
             }
         }
@@ -192,12 +192,13 @@ Geometry =
         if ( !intersected )
             return { m_intersect : false };
 
-        var point = { m_x : a_rayBegin.m_x + closestAlpha * a_rayDir.m_x,
-                      m_y : a_rayBegin.m_y + closestAlpha * a_rayDir.m_y };
+        var point = { m_x : a_segBegin.m_x + closestAlpha * a_segVec.m_x,
+                      m_y : a_segBegin.m_y + closestAlpha * a_segVec.m_y };
 
         return { m_intersect : true, m_point : point };
     },
 
+    //Возвращает точки в порядке удаления от начала луча
     RayCircleIntersectInner : function ( a_rayBegin, a_rayDir, a_center, a_rad )
     {
         var circRayVec = { m_x : a_rayBegin.m_x - a_center.m_x,
@@ -209,7 +210,7 @@ Geometry =
 
         var discr = b * b - 4 * a * c;
 
-        if ( discr < -Constants.EPSILON )
+        if ( discr < -EPSILON )
             return [];
 
         discr = Math.sqrt( discr );
@@ -217,13 +218,13 @@ Geometry =
         var params = [ ( -b - discr ) / ( 2 * a ),
                        ( -b + discr ) / ( 2 * a ) ];
 
-        if ( Math.abs( params[ 0 ] - params[ 1 ] ) < Constants.EPSILON )
+        if ( Math.abs( params[ 0 ] - params[ 1 ] ) < EPSILON )
             params = [ params[ 0 ] ];
 
         var ans = [];
         for ( var i = 0; i < params.length; ++i )
         {
-            if ( ( Math.abs( params[ i ] ) < Constants.EPSILON ) || ( params[ i ] > Constants.EPSILON ) )
+            if ( ( Math.abs( params[ i ] ) < EPSILON ) || ( params[ i ] > EPSILON ) )
             {
                 var pos = { m_x : a_rayBegin.m_x + params[ i ] * a_rayDir.m_x,
                             m_y : a_rayBegin.m_y + params[ i ] * a_rayDir.m_y }
@@ -235,16 +236,7 @@ Geometry =
         return ans;
     },
 
-    RayCircleIntersect : function ( a_rayBegin, a_rayDir, a_center, a_rad )
-    {
-        var res = this.RayCircleIntersectInner( a_rayBegin, a_rayDir, a_center, a_rad );
-
-        if ( res.length === 0 )
-            return { m_intersect : false };
-
-        return { m_intersect : true, m_point : res[ 0 ].m_pos };
-    },
-
+    //Возвращает точки в порядке удаления от начала отрезка
     SegCircleIntersect : function ( a_segBegin, a_segVec, a_center, a_rad )
     {
         var ans = [];
@@ -259,6 +251,7 @@ Geometry =
         return ans;
     },
 
+    //Возвращает все точки пересечения
     CircleRecIntersect : function ( a_center, a_rad, a_rec )
     {
         var res = { m_intersect : false,

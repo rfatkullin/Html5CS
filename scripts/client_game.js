@@ -4,6 +4,7 @@ function World()
 	var ourCommandColor 	= [ 0.0, 0.0, 1.0, 0.3 ];
 	var enemyCommandColor 	= [ 1.0, 0.0, 0.0, 0.3 ];
 	var wallColor			= [ 0.5, 0.0, 1.0, 1.0 ];
+	var bulletColor         = [ 0.0, 0.0, 0.0, 1.0 ];
 	var healthColor			= [ 0.0, 0.5, 0.0, 1.0 ];
 
 	this.SetPlayerInfo = function ( a_id )
@@ -33,6 +34,10 @@ function World()
 				case 'wall' :
 					this.DrawWall( currObj.m_pos );
 					break;
+
+				case 'bullet' :
+                    this.DrawBullet( currObj.m_pos );
+                    break;
 
 				default:
 					break;
@@ -64,6 +69,14 @@ function World()
 		this.m_wallDrawer.SetPos( a_pos );
 		this.m_wallDrawer.Draw( wallColor );
 	}
+
+	this.DrawBullet = function ( a_pos )
+    {
+        this.m_bulletDrawer.SetPos( a_pos );
+        this.m_bulletDrawer.Draw( bulletColor );
+
+        //InfLog( 'Draw bullet on ' + JSON.stringify( a_pos ) );
+    }
 
 	this.Draw = function ()
 	{
@@ -164,7 +177,7 @@ function World()
 		var rightRotate = false;
 		var pseudoScalar = a_startDir.m_x * a_endDir.m_y - a_startDir.m_y * a_endDir.m_x;
 
-		if ( pseudoScalar < Geometry.EPSILON )
+		if ( pseudoScalar < EPSILON )
 			rightRotate = true;
 
 		var angle = Math.acos( a_startDir.m_x * a_endDir.m_x + a_startDir.m_y * a_endDir.m_y );
@@ -194,7 +207,6 @@ function World()
 		{
 			delId = leftSnapShotObj.m_deleted[ i ];
 			delete this.m_renderWorld[ delId ];
-			InfLog( 'Delete object with id ' + delId );
 		}
 
 		for ( i = 0; i < rightSnapShotObj.m_updated.length; ++i )
@@ -282,6 +294,7 @@ function World()
     this.m_playerId			= -1;
     this.m_playerDrawer		= new Character( { m_x : 100.0, m_y : 100.0 } );
     this.m_wallDrawer		= new Rectangle( { m_x : 100, m_y : 100 }, Wall.WIDTH, Wall.HEIGHT );
+    this.m_bulletDrawer     = new Circle( { m_x : 100, m_y : 100 }, Bullet.RAD );
     this.m_extrapolVal 		= 0;
     this.m_extrapolCount 	= 0;
     this.m_lastExtrapolVal  = 0;

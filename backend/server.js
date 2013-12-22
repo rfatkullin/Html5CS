@@ -7,7 +7,7 @@ function GetTime()
 	return ( new Date() ).getTime();
 }
 
-function MessageProcess( a_msg )
+function OnMessage( a_msg )
 {
 	try
 	{
@@ -45,13 +45,23 @@ function MessageProcess( a_msg )
 	}
 }
 
+function ClientLeft( a_ws )
+{
+	g_world.DeletePlayer( a_ws.m_playerId );
+	delete g_server.m_conns[ a_ws.m_playerId ];
+	--g_server.m_usersCnt;
+}
+
+function OnError()
+{
+	ClientLeft( this );
+	Logger.Info( '[CL=' + this.m_playerId + ']' + ' connection error - left.' );
+}
+
 function OnClose()
 {
-	g_world.DeletePlayer( this.m_playerId );
-	delete g_server.m_conns[ this.m_playerId ];
-	--g_server.m_usersCnt;
-
-	Logger.Info( '[CL=' + this.m_playerId + ']' + ' left.' );
+	ClientLeft( this );
+	Logger.Info( '[CL=' + this.m_playerId + ']' + ' close connection - left.' );
 }
 
 function GameServerWrapper()
@@ -87,7 +97,7 @@ function GameServerWrapper()
 	server.on( 'connection', function( a_ws )
 	{
 		thisObj.AddConn( a_ws );
-		a_ws.on( 'message', MessageProcess );
+		a_ws.on( 'message', OnMessage );
 		a_ws.on( 'close', OnClose );
 
 		SendPing( a_ws );
@@ -161,10 +171,6 @@ function UpdatePings()
 		if ( !conn.m_logined )
 			continue;
 
-
-		if ( !conn.m_logined )
-			continue;
-
 		SendPing( conn );
 	}
 }
@@ -178,7 +184,7 @@ function PrintPings()
         if ( !conn.m_logined )
                 continue;
 
-        Logger.Info( 'Ping for client ' + conn.m_playerId + ' = '  + conn.m_ping / 1000.0 );
+        Logger.Info( 'Ping for client ' + conn.m_playerId + ' = '  + conn.m_ping / Game.MSECS_IN_SEC );
     }
 }
 
@@ -199,7 +205,7 @@ function main()
 
 	setInterval( TickHandler, TICKS_INTERVAL );
 	setInterval( UpdatePings, PING_UPD_INTERVAL );
-	setInterval( PrintPings, 1000 );
+	//setInterval( PrintPings, 1000 );
 }
 
 main();

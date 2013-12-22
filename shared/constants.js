@@ -16,16 +16,17 @@
     Game   = { 	INTER_TIME   : 75,
     			MSECS_IN_SEC : 1000 };
 
-	Geometry = { EPSILON : 0.000000001 };
+    Bullet = {  VEL : 500,
+                RAD : 2
+             };
 
-	Collide  = { ITER_CNT : 20 };
+	EPSILON = 0.000000001;
 
 })()
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
 	module.exports = { Wall   	: Wall,
 				  	   Player 	: Player,
-				  	   Geometry : Geometry,
-				  	   Collide  : Collide,
+				  	   EPSILON	: EPSILON,
 				  	   Game		: Game };
 

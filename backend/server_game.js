@@ -4,13 +4,15 @@ var Logger   		= require( '../shared/logger' ).Logger;
 var Commands 		= require( '../shared/commands' ).Commands;
 var Player   		= require( '../shared/constants' ).Player;
 var Wall 	 		= require( '../shared/constants' ).Wall;
-var EPSILON	 		= require( '../shared/constants' ).Geometry.EPSILON;
+var EPSILON	 		= require( '../shared/constants' ).EPSILON;
+var Game 			= require( '../shared/constants' ).Game;
 
 var CreateWorld = function()
 {
 	var SNAPSHOTS_CNT 	= 66; // 2 sec
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
+	var ITER_CNT 		= 20
 
 	this.NewWall = function ( a_pos )
 	{
@@ -121,12 +123,12 @@ var CreateWorld = function()
 
 	this.CalcIterForWall = function ( a_player, a_wall, a_shift )
 	{
-		var iter = Collide.ITER_CNT + 1;
+		var iter = ITER_CNT + 1;
 
 		do
     	{
             --iter;
-            var factor = iter / Collide.ITER_CNT;
+            var factor = iter / ITER_CNT;
             var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
                            m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 
@@ -140,13 +142,13 @@ var CreateWorld = function()
 	this.CalcIterForPlayer = function ( a_player, a_otherPos, a_shift )
 	{
 		var safeDist = Math.pow( 2 * Player.RAD, 2 );
-		var iter = Collide.ITER_CNT + 1;
+		var iter = ITER_CNT + 1;
 
 		do
 		{
 			--iter;
 
-			var factor = iter / Collide.ITER_CNT;
+			var factor = iter / ITER_CNT;
 			var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
 				   		   m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 
@@ -162,7 +164,7 @@ var CreateWorld = function()
 
 	this.MovePlayerByOneAxis = function ( a_player, a_shift )
 	{
-		var maxIter = Collide.ITER_CNT;
+		var maxIter = ITER_CNT;
 		var iter = maxIter;
 
 		for ( var id in this.m_world )
@@ -194,7 +196,7 @@ var CreateWorld = function()
 		if ( maxIter <= 0 )
 			return;
 
-		var factor 	 = maxIter / Collide.ITER_CNT;
+		var factor 	 = maxIter / ITER_CNT;
 		a_player.m_pos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
 					       m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 		this.m_updObjs[ a_player.m_id ] = a_player;
@@ -219,10 +221,71 @@ var CreateWorld = function()
 		//Logger.Info( 'Shift [' + a_player.m_id + '] on vec ' + JSON.stringify( shift ) );
 	}
 
+ 	this.IsOutOfField = function ( a_pos )
+    {
+        if ( ( a_pos.m_x < 0 || a_pos.m_x > MAP_WIDTH ) ||
+             ( a_pos.m_y < 0 || a_pos.m_y > MAP_HEIGHT ) )
+        	return true;
+
+        return false;
+    }
+
+	this.DeleteBullet = function( a_bulletId )
+	{
+		if ( this.m_world[ a_bulletId ] === undefined )
+			return;
+
+		this.m_delObjs[ a_bulletId ] = this.m_world[ a_bulletId ];
+
+		delete this.m_bullets[ a_bulletId ];
+		delete this.m_world[ a_bulletId ];
+	}
+
 	this.MovePlayers = function ( a_expiredTime )
 	{
 		for ( var id in this.m_players )
 			this.MovePlayer( this.m_world[ id ], a_expiredTime );
+	}
+
+	this.MoveBullets = function ( a_expiredTime )
+	{
+		for ( var id in this.m_bullets )
+			this.MoveBullet( this.m_world[ id ], a_expiredTime );
+	}
+
+	this.MoveBullet = function ( a_bullet, a_expiredTime )
+	{
+		var moveVec = { m_x : a_expiredTime * a_bullet.m_vel.m_x,
+					    m_y : a_expiredTime * a_bullet.m_vel.m_y };
+		var newPos = { m_x : a_bullet.m_pos.m_x + moveVec.m_x,
+					   m_y : a_bullet.m_pos.m_y + moveVec.m_y };
+
+		if ( this.IsOutOfField( newPos ) === true )
+        	this.DeleteBullet( a_bullet.m_id );
+        else
+        {
+        	for ( var wallId in this.m_walls )
+        	{
+        		if ( Geometry.SegRecIntersect( a_bullet.m_pos, moveVec, this.m_walls[ wallId ] ).m_intersect === true )
+        		{
+        			this.DeleteBullet( a_bullet.m_id );
+        			break;
+        		}
+        	}
+
+		    for ( var playerId in this.m_players )
+		    {
+		    	if ( Geometry.SegCircleIntersect( a_bullet.m_pos, moveVec, this.m_world[ playerId ].m_pos, Player.RAD ).length > 0 )
+		    	{
+		    		this.DeleteBullet( a_bullet.m_id );
+		    		this.PlayerAttacked( playerId );
+		    		break;
+		    	}
+		    }
+		}
+
+        this.m_updObjs[ a_bullet.m_id ] = a_bullet;
+        a_bullet.m_pos = newPos;
 	}
 
 	this.SnapshotWorld = function ( a_currTime )
@@ -232,6 +295,9 @@ var CreateWorld = function()
 
 		for ( var id in this.m_delObjs )
 			delete this.m_world[ id ];
+
+		for ( var id in this.m_addObjs )
+			delete this.m_updObjs[ id ];
 
 		this.m_snapshotObjList.push( {  m_time	   : a_currTime,
 										m_tick 	   : this.m_tick,
@@ -245,10 +311,50 @@ var CreateWorld = function()
 		this.m_delObjs	= {};
 	}
 
+	this.DetectCollisions = function ()
+	{
+		for ( var bulletId in this.m_bullets )
+		{
+			var collide = false;
+			var bullet = this.m_world[ bulletId ];
+
+			for ( var wallId in this.m_walls )
+			{
+				var wall = this.m_walls[ wallId ];
+
+				if ( Geometry.PointInRect( bullet.m_pos, wall ) === true )
+				{
+                	this.DeleteBullet( bulletId );
+                	collide = true;
+                	break;
+				}
+			}
+
+			if ( collide === true )  //Попал в стену
+				continue;
+
+			for ( var playerId in this.m_players )
+			{
+				var player = this.m_world[ playerId ];
+
+				if ( ( bullet.m_teamId !== player.m_teamId ) &&
+					 ( Geometry.PointInCircle( bullet.m_pos, player.m_pos, Player.RAD ) === true ) )
+	            {
+	                this.DeleteBullet( bulletId );
+	                this.PlayerAttacked( playerId );
+	                break;
+	            }
+			}
+		}
+	}
+
 	this.NextStep = function ( a_currTime, a_expiredTime )
 	{
 		++this.m_tick;
+
 		this.MovePlayers( a_expiredTime );
+		this.MoveBullets( a_expiredTime );
+
 		this.SnapshotWorld( a_currTime );
 	}
 
@@ -286,7 +392,6 @@ var CreateWorld = function()
 					   m_dirPoint	: { m_x : pos.m_x + dir.m_x, m_y : pos.m_x + dir.m_x },
 					   m_dir  		: dir };
 
-		this.m_playerCommands[ a_userId ] 	= [];
 		this.m_world[ a_userId ]   			= player;
 		this.m_players[ a_userId ] 			= true;
 		this.m_addObjs[ a_userId ] 			= player;
@@ -305,69 +410,54 @@ var CreateWorld = function()
 		this.m_teams[ this.m_world[ a_playerId ].m_teamId ]--
 		this.m_delObjs[ a_playerId ] = this.m_world[ a_playerId ];
 
-		delete this.m_playerCommands[ a_playerId ];
 		delete this.m_players[ a_playerId ];
 		delete this.m_world[ a_playerId ];
 	}
 
-	this.GetWorldByTime = function ( a_time )
+	this.GetWorldIndexByTime = function ( a_time )
 	{
-		var leftBound  	= -1;
-		var rightBound 	= -1;
-		var lastInd 	= this.m_snapshotObjList.length - 1;
+		var lastInd = this.m_snapshotObjList.length - 1;
 
 		if ( a_time > this.m_snapshotObjList[ lastInd ].m_time )
-			return this.m_snapshotObjList[ lastInd ].m_snapshot;
+			return lastInd + 1;
+
+		if ( a_time < this.m_snapshotObjList[ 0 ].m_time )
+			return 0;
 
 		for ( var i = lastInd; i > 0; --i )
 		{
 			if ( ( this.m_snapshotObjList[ i - 1 ].m_time <= a_time ) && ( a_time <= this.m_snapshotObjList[ i ].m_time )  )
-			{
-				leftBound  = i - 1;
-				rightBound = i;
-				break;
-			}
+				return i;
 		}
-
-		if ( ( leftBound < 0 ) || ( rightBound < 0 ) )
-			return undefined;
-
-		if ( ( a_time - this.m_snapshotObjList[ leftBound ].m_time ) <= ( this.m_snapshotObjList[ rightBound ].m_time - a_time ) )
-			return this.m_snapshotObjList[ leftBound ].m_snapshot;
-
-		return this.m_snapshotObjList[ rightBound ].m_snapshot;
 	}
 
-	this.ProcessAttack = function ( a_time, a_playerId, a_pos, a_point )
+	this.BulletAndWorldIntersect = function ( a_playerId, a_segBegin, a_segVec, a_world )
 	{
-		var world = this.GetWorldByTime( a_time );
+		var res 			= { m_intersect : false };
+		var closestObj  	= {};
 
-		if ( world === undefined )
-			return;
-
-		var player 		= world[ a_playerId ];
-		var interObjs	= [];
-		var res 		= { m_intersect : false };
-		var dir 		= Geometry.GetDirection( a_pos, a_point );
-		var closestObj  = {};
-
-		for ( var id in world )
+		for ( var id in a_world )
 		{
 			if ( id === a_playerId )
 				continue;
 
 			res.m_intersect = false;
 
-			switch ( world[ id ].m_type )
+			switch ( a_world[ id ].m_type )
 			{
 				case 'player' :
-					if ( world[ id ].m_teamId === player.m_teamId )
+					if ( a_world[ id ].m_teamId === a_world[ a_playerId ].m_teamId )
 						continue;
-					res = Geometry.RayCircleIntersect( a_pos, dir, world[ id ].m_pos, Player.RAD );
+					var points = Geometry.SegCircleIntersect( a_segBegin, a_segVec, a_world[ id ].m_pos, Player.RAD );
+					if ( points.length > 0 )
+					{
+						res.m_intersect = true;
+						res.m_point = points[ 0 ];
+					}
 					break;
 
 				case 'wall' :
-					res =  Geometry.RayRecIntersect( a_pos, dir, this.m_walls[ id ] );
+					res =  Geometry.SegRecIntersect( a_segBegin, a_segVec, this.m_walls[ id ] );
 					break;
 
 				default :
@@ -376,7 +466,7 @@ var CreateWorld = function()
 
 			if ( res.m_intersect )
 			{
-				var dist = Geometry.Dist( a_pos, res.m_point );
+				var dist = Geometry.Dist( a_segBegin, res.m_point );
 
 				if ( closestObj.m_id === undefined )
 				{
@@ -393,25 +483,83 @@ var CreateWorld = function()
 
 		if ( closestObj.m_id !== undefined )
 		{
+			//Так как мы искали в прошлом, в текущем снэпшоте этого объекта может и не быть
 			if ( this.m_world[ closestObj.m_id ] === undefined )
 				return;
 
 			if ( this.m_world[ closestObj.m_id ].m_type === 'player' )
-			{
-				--this.m_world[ closestObj.m_id ].m_health;
-				this.m_updObjs[ closestObj.m_id ] = this.m_world[ closestObj.m_id ];
+				this.PlayerAttacked( closestObj.m_id );
 
-				if ( this.m_world[ closestObj.m_id ].m_health <= 0 )
-					this.DeletePlayer( closestObj.m_id );
-			}
+			return true;
 		}
+
+		return false;
+	}
+
+	this.PlayerAttacked = function ( a_playerId )
+	{
+		--this.m_world[ a_playerId ].m_health;
+		this.m_updObjs[a_playerId ] = this.m_world[ a_playerId ];
+
+		if ( this.m_world[ a_playerId ].m_health <= 0 )
+			this.DeletePlayer( a_playerId );
+	}
+
+	this.ProcessAttack = function ( a_time, a_playerId, a_pos, a_point )
+	{
+		var startWorldInd 	= this.GetWorldIndexByTime( a_time );
+		var player 			= this.m_world[ a_playerId ];
+		var dir 			= Geometry.GetDirection( a_pos, a_point );
+		var lastBegin		= { m_x : a_pos.m_x + dir.m_x * Player.BARREL_LENGTH,
+		            			m_y : a_pos.m_y + dir.m_y * Player.BARREL_LENGTH }
+		var lastTime		= a_time;
+		var collide 		= false;
+
+		for ( var i = startWorldInd; i < this.m_snapshotObjList.length; ++i )
+		{
+			var timeInt = ( this.m_snapshotObjList[ i ].m_time - lastTime ) / Game.MSECS_IN_SEC;
+			var segVec = { m_x : timeInt * Bullet.VEL * dir.m_x,
+						   m_y : timeInt * Bullet.VEL * dir.m_y };
+
+			if ( this.BulletAndWorldIntersect( a_playerId, lastBegin, segVec, this.m_snapshotObjList[ i ].m_snapshot ) )
+			{
+				collide = true;
+				break;
+			}
+
+			lastTime = this.m_snapshotObjList[ i ].m_time;
+			lastBegin = { m_x : lastBegin.m_x + segVec.m_x,
+						  m_y : lastBegin.m_y + segVec.m_y };
+		}
+
+		if ( collide )
+			return;
+
+		//Если дошли сюда, то пуля все еще существует. Добавляем ее в последний мир.
+		//lastBegin будет содержать актуальную позицию
+		this.AddNewBullet( a_playerId, lastBegin, dir );
+	}
+
+	this.AddNewBullet = function ( a_playerId, a_pos, a_dir )
+	{
+		var vel = { m_x : a_dir.m_x * Bullet.VEL,
+		            m_y : a_dir.m_y * Bullet.VEL };
+
+		var bullet = { m_id     : this.GetUniqueId(),
+                       m_type   : 'bullet',
+                       m_pos    : a_pos,
+                       m_vel    : vel,
+                       m_ownId  : a_playerId,
+                       m_teamId : this.m_world[ a_playerId ].m_teamId };
+
+		this.m_world[ bullet.m_id ]   = bullet;
+		this.m_bullets[ bullet.m_id ] = true;
+		this.m_addObjs[ bullet.m_id ] = bullet;
 	}
 
 	//For unique keys
 	this.m_currObjId		= 0;
 	this.m_tick				= 0;
-	this.m_playersCnt		= 0;
-	this.m_playerCommands	= {};
 	this.m_world    		= {};
 	this.m_addObjs  		= {};
 	this.m_updObjs			= {};
@@ -421,7 +569,7 @@ var CreateWorld = function()
 
 	this.m_walls 			= {};
 	this.m_players 			= {};
-
+	this.m_bullets			= {};
 
 	this.GenerateMap();
 	this.InitTeams();
