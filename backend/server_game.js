@@ -266,7 +266,7 @@ var CreateWorld = function()
         {
         	for ( var wallId in this.m_walls )
         	{
-        		if ( Geometry.SegRecIntersect( a_bullet.m_pos, moveVec, this.m_walls[ wallId ] ).m_intersect === true )
+        		if( Geometry.SegInterOrInRec( a_bullet.m_pos, moveVec, this.m_walls[ wallId ] ).m_intersect === true )
         		{
         			this.DeleteBullet( a_bullet.m_id );
         			break;
@@ -275,10 +275,16 @@ var CreateWorld = function()
 
 		    for ( var playerId in this.m_players )
 		    {
-		    	if ( Geometry.SegCircleIntersect( a_bullet.m_pos, moveVec, this.m_world[ playerId ].m_pos, Player.RAD ).length > 0 )
+		    	if ( parseInt( playerId ) === a_bullet.m_ownerId )
+		    		continue;
+
+		    	if ( Geometry.SegInterOrInCircle( a_bullet.m_pos, moveVec, this.m_world[ playerId ].m_pos, Player.RAD ).m_intersect === true )
 		    	{
 		    		this.DeleteBullet( a_bullet.m_id );
-		    		this.PlayerAttacked( playerId );
+
+		    		if ( this.m_world[ playerId ].m_teamId !== a_bullet.m_teamId )
+		    			this.PlayerAttacked( playerId );
+
 		    		break;
 		    	}
 		    }
@@ -311,49 +317,12 @@ var CreateWorld = function()
 		this.m_delObjs	= {};
 	}
 
-	this.DetectCollisions = function ()
-	{
-		for ( var bulletId in this.m_bullets )
-		{
-			var collide = false;
-			var bullet = this.m_world[ bulletId ];
-
-			for ( var wallId in this.m_walls )
-			{
-				var wall = this.m_walls[ wallId ];
-
-				if ( Geometry.PointInRect( bullet.m_pos, wall ) === true )
-				{
-                	this.DeleteBullet( bulletId );
-                	collide = true;
-                	break;
-				}
-			}
-
-			if ( collide === true )  //Попал в стену
-				continue;
-
-			for ( var playerId in this.m_players )
-			{
-				var player = this.m_world[ playerId ];
-
-				if ( ( bullet.m_teamId !== player.m_teamId ) &&
-					 ( Geometry.PointInCircle( bullet.m_pos, player.m_pos, Player.RAD ) === true ) )
-	            {
-	                this.DeleteBullet( bulletId );
-	                this.PlayerAttacked( playerId );
-	                break;
-	            }
-			}
-		}
-	}
-
 	this.NextStep = function ( a_currTime, a_expiredTime )
 	{
 		++this.m_tick;
 
-		this.MovePlayers( a_expiredTime );
 		this.MoveBullets( a_expiredTime );
+		this.MovePlayers( a_expiredTime );
 
 		this.SnapshotWorld( a_currTime );
 	}
@@ -438,7 +407,7 @@ var CreateWorld = function()
 
 		for ( var id in a_world )
 		{
-			if ( id === a_playerId )
+			if ( parseInt( id ) === a_playerId )
 				continue;
 
 			res.m_intersect = false;
@@ -446,18 +415,11 @@ var CreateWorld = function()
 			switch ( a_world[ id ].m_type )
 			{
 				case 'player' :
-					if ( a_world[ id ].m_teamId === a_world[ a_playerId ].m_teamId )
-						continue;
-					var points = Geometry.SegCircleIntersect( a_segBegin, a_segVec, a_world[ id ].m_pos, Player.RAD );
-					if ( points.length > 0 )
-					{
-						res.m_intersect = true;
-						res.m_point = points[ 0 ];
-					}
+					res =  Geometry.SegInterOrInCircle( a_segBegin, a_segVec, a_world[ id ].m_pos, Player.RAD );
 					break;
 
 				case 'wall' :
-					res =  Geometry.SegRecIntersect( a_segBegin, a_segVec, this.m_walls[ id ] );
+					res = Geometry.SegInterOrInRec( a_segBegin, a_segVec, this.m_walls[ id ] );
 					break;
 
 				default :
@@ -487,8 +449,11 @@ var CreateWorld = function()
 			if ( this.m_world[ closestObj.m_id ] === undefined )
 				return;
 
-			if ( this.m_world[ closestObj.m_id ].m_type === 'player' )
+			if ( ( this.m_world[ closestObj.m_id ].m_type   === 'player' ) &&
+				 ( this.m_world[ closestObj.m_id ].m_teamId !== this.m_world[ a_playerId ].m_teamId ) )
+			{
 				this.PlayerAttacked( closestObj.m_id );
+			}
 
 			return true;
 		}
@@ -545,12 +510,12 @@ var CreateWorld = function()
 		var vel = { m_x : a_dir.m_x * Bullet.VEL,
 		            m_y : a_dir.m_y * Bullet.VEL };
 
-		var bullet = { m_id     : this.GetUniqueId(),
-                       m_type   : 'bullet',
-                       m_pos    : a_pos,
-                       m_vel    : vel,
-                       m_ownId  : a_playerId,
-                       m_teamId : this.m_world[ a_playerId ].m_teamId };
+		var bullet = { m_id     	: this.GetUniqueId(),
+                       m_type   	: 'bullet',
+                       m_pos    	: a_pos,
+                       m_ownerId 	: a_playerId,
+                       m_vel    	: vel,
+                       m_teamId 	: this.m_world[ a_playerId ].m_teamId };
 
 		this.m_world[ bullet.m_id ]   = bullet;
 		this.m_bullets[ bullet.m_id ] = true;

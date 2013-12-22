@@ -86,7 +86,7 @@ Geometry =
         var vec = { m_x : a_pos.m_x - m_center.m_x,
                     m_y : a_pos.m_y - m_center.m_y };
 
-        return vec.m_x * vec.m_x + vec.m_y * vec.m_y + EPSILON <= a_rad;
+        return vec.m_x * vec.m_x + vec.m_y * vec.m_y + EPSILON <= a_rad * a_rad;
     },
 
     Rectangle : function( a_pos, a_width, a_height )
@@ -279,7 +279,34 @@ Geometry =
         }
 
         return res;
+    },
+
+    SegInterOrInRec : function ( a_segBegin, a_segVec, a_rec )
+    {
+        //1) Отрезок слишком мал, чтобы пересечься с прямоугольником. Берем любую точку, так как отрезок все равно лежит целиком внутри
+        if ( this.PointInRect( a_segBegin, a_rec ) === true )
+            return {  m_intersect : true, m_point : a_segBegin };
+
+        //2) Пересекаем отрезок с прямоугольником
+        return this.SegRecIntersect( a_segBegin, a_segVec, a_rec );
+    },
+
+
+    SegInterOrInCircle : function ( a_segBegin, a_segVec, a_center, a_rad )
+    {
+        //1) Отрезок слишком мал, чтобы пересечься с окружностью. Берем любую точку, так как отрезок все равно лежит целиком внутри
+        if ( this.PointInCircle( a_segBegin, a_center, Player.RAD ) )
+            return { m_intersect : true, m_point : a_segBegin };
+
+        //2) Пересекаем отрезок с окружностью
+        var res = this.SegCircleIntersect( a_segBegin, a_segVec, a_center, a_rad );
+
+        if ( res.length > 0 )
+            return { m_intersect : false, m_point : res[ 0 ] };
+
+        return { m_intersect : false };
     }
+
 }
 
 module.exports = { Geometry : Geometry };
