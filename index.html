@@ -26,7 +26,7 @@
         </style>
 	</head>
 
-	<body onload='OnLoad()' onkeydown='OnKeyDown(event)' onkeyup='OnKeyUp(event)' onmousemove='OnMouseMove(event)' onclick='OnClick(event)' onkeyup='OnKeyUp(event)' onmousedown='OnMouseDown(event)'>
+	<body onload='OnLoad()' onkeydown='OnKeyDown(event)' onkeyup='OnKeyUp(event)'>
     <!--<body onLoad='DebugMode()'>-->
 
         <script id='shader_vertex' type='x-shader/x-vertex'>
@@ -58,12 +58,16 @@
                 <input type='button' id='control_button' value='Connect' onclick='Connect(this)'>
             </p>
 
-            <canvas id='game-canvas' width='800' height='600'>
+            <canvas id='game-canvas' width='800' height='600' onmousemove='OnMouseMove(event)' onclick='OnClick(event)' onkeyup='OnKeyUp(event)' onmousedown='OnMouseDown(event)'>
     			Your browser does not support HTML5 Canvas.
     		</canvas>
 
             <p align='left' id='aver_extrapolation'>Среднее время экстраполяции за последние 3 сек : 0 сек</p>
             <p align='left' id='last_extrapolation'>Последняя экстраполяции: на 0 сек</p>
+            <p align='left'>
+                <input type='range' min='0' max='300' id='inter_val' oninput='UpdateInterpolateValue()' value='75'>
+            </p>
+            <p align='left' id='inter_val_text'>Задержка интерполяции: 75 мсек</p>
 	</body>
 
 </html>

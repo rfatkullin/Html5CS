@@ -36,7 +36,7 @@ function OnMessage( a_msg )
 
 		case 'control' :
 			if ( g_world.PlayerAlive( this.m_playerId ) )
-				g_world.ProcessControl( currTime - this.m_ping - Game.INTER_TIME, this.m_playerId, a_msg.commands );
+				g_world.ProcessControl( currTime - this.m_ping - a_msg.m_interVal, this.m_playerId, a_msg.commands );
 			break;
 
 		default :

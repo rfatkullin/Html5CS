@@ -270,7 +270,7 @@ Geometry =
                          m_y : a_rec.m_verts[ nextInd + 1 ] - a_rec.m_verts[ i + 1 ] };
 
             var currRes = this.SegCircleIntersect( segBegin, segDir, a_center, a_rad );
-            if ( res.length != 0 )
+            if ( currRes.length != 0 )
             {
                 res.m_intersect  = true;
                 res.m_points     = res.m_points.concat( currRes );
@@ -279,6 +279,14 @@ Geometry =
         }
 
         return res;
+    },
+
+    CircleInterOrInRec : function ( a_center, a_rad, a_rec )
+    {
+        if ( this.PointInRect( a_center, a_rec ) === true )
+            return true;
+
+        return this.CircleRecIntersect( a_center, a_rad, a_rec ).m_intersect;
     },
 
     SegInterOrInRec : function ( a_segBegin, a_segVec, a_rec )
@@ -305,8 +313,18 @@ Geometry =
             return { m_intersect : false, m_point : res[ 0 ] };
 
         return { m_intersect : false };
-    }
+    },
 
+    CircleCircleInter : function ( a_aCenter, a_aRad, a_bCenter, a_bRad )
+    {
+        var safeDist = Math.pow( a_aRad + a_bRad, 2 );
+        var distSqr = this.DistSqr( a_aCenter, a_bCenter );
+
+        if ( ( Math.abs( safeDist - distSqr ) < EPSILON ) || ( distSqr > safeDist + EPSILON ) )
+            return false;
+
+        return true;
+    }
 }
 
 module.exports = { Geometry : Geometry };

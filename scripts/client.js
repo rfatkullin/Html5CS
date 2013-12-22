@@ -46,6 +46,12 @@ function OnMessage( a_msg )
     }
 }
 
+function UpdateInterpolateValue()
+{
+    g_world.INTER_TIME = document.getElementById( 'inter_val' ).value;
+    document.getElementById( 'inter_val_text' ).innerHTML = 'Задержка интерполяции: ' +  g_world.INTER_TIME + ' мсек';
+}
+
 function OnKeyDown( a_event )
 {
     if ( !g_client.m_start )
@@ -126,7 +132,7 @@ function ProcessPlayerAttack( a_mousePos )
     var command = { type  : Commands.ATTACK,
                     pos   : g_world.GetPlayerPos(),
                     point : a_mousePos.m_pos };
-    g_webSocket.send( JSON.stringify( { type : 'control', commands : [ command ] } ) );
+    g_webSocket.send( JSON.stringify( { type : 'control', m_interVal : g_world.INTER_TIME, commands : [ command ] } ) );
 }
 
 function ProcessInput()
@@ -227,6 +233,8 @@ function Connect( a_button )
 
     g_client = new GameClient();
     g_world  = new World();
+
+    UpdateInterpolateValue();
 
     g_webSocket = new WebSocket( 'ws://localhost:1024' );
     //g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );

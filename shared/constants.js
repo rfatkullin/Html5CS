@@ -13,8 +13,7 @@
     			HEALTH_IND_OFFS :  5
     		 };
 
-    Game   = { 	INTER_TIME   : 75,
-    			MSECS_IN_SEC : 1000 };
+    Game   = { 	MSECS_IN_SEC : 1000 };
 
     Bullet = {  VEL : 500,
                 RAD : 2

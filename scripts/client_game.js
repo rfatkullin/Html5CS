@@ -103,7 +103,7 @@ function World()
 			return;
 
 		var currTime 			= ( new Date() ).getTime();
-		var renderTime 			= currTime - Game.INTER_TIME;
+		var renderTime 			= currTime - this.INTER_TIME;
 		var lastSnapshotInd 	= this.m_snapshotObjList.length - 1;
 		var leftBound			= -1;
 		var rightBound			= -1;
@@ -298,4 +298,5 @@ function World()
     this.m_extrapolVal 		= 0;
     this.m_extrapolCount 	= 0;
     this.m_lastExtrapolVal  = 0;
+    this.INTER_TIME 		= 0;
 }

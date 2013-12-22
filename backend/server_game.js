@@ -141,7 +141,6 @@ var CreateWorld = function()
 
 	this.CalcIterForPlayer = function ( a_player, a_otherPos, a_shift )
 	{
-		var safeDist = Math.pow( 2 * Player.RAD, 2 );
 		var iter = ITER_CNT + 1;
 
 		do
@@ -152,9 +151,7 @@ var CreateWorld = function()
 			var newPos = { m_x : a_player.m_pos.m_x + factor * Player.VEL * a_shift.m_x,
 				   		   m_y : a_player.m_pos.m_y + factor * Player.VEL * a_shift.m_y };
 
-			var distSqr = Geometry.DistSqr( newPos, a_otherPos );
-
-			if ( ( Math.abs( safeDist - distSqr ) < EPSILON ) || ( distSqr > safeDist + EPSILON ) )
+			if ( Geometry.CircleCircleInter( newPos, Player.RAD, a_otherPos, Player.RAD ) === false )
 				break;
 		}
 		while ( iter > 0 );
@@ -341,6 +338,40 @@ var CreateWorld = function()
 				 m_delObjs : this.m_snapshotObjList[ lastInd ].m_delObjs };
 	}
 
+	this.FindPosForNewPlayer = function ()
+	{
+		var beginX 	= Player.RAD;
+		var endX 	= MAP_WIDTH - Player.RAD;
+		var beginY 	= Player.RAD;
+		var endY	= MAP_HEIGHT - Player.RAD;
+		var width  	= endX - beginX;
+		var height 	= endY - beginY;
+		var collide = false;
+
+		do
+		{
+			collide = false;
+
+			var pos = { m_x : beginX + Math.random() * width,
+						m_y : beginY + Math.random() * height };
+
+			for ( var id in this.m_world )
+			{
+				if ( ( ( this.m_world[ id ].m_type === 'wall' ) && ( Geometry.CircleInterOrInRec( pos, Player.RAD, this.m_walls[ id ] ) === true ) ) ||
+					 ( ( this.m_world[ id ].m_type === 'player' ) && ( Geometry.CircleCircleInter( pos, Player.RAD, this.m_world[ id ].m_pos, Player.RAD ) === true ) ) )
+				{
+					Logger.Info( 'Player pos : ' + JSON.stringify( pos ) );
+					Logger.Info( 'Wall object : ' + JSON.stringify( this.m_walls[ id ] ) );
+					collide = true;
+					break;
+				}
+			}
+		}
+		while ( collide === true )
+
+		return pos;
+	}
+
 	this.AddNewPlayer = function ( a_userId )
 	{
 		var teamId = 0;
@@ -349,7 +380,7 @@ var CreateWorld = function()
 			teamId = 1;
 		this.m_teams[ teamId ]++;
 
-		var pos = jQuery.extend( false, {}, TeamsDeployPos[ teamId ] );
+		var pos = this.FindPosForNewPlayer();
 		var dir = jQuery.extend( false, {}, TeamsDir[ teamId ] );
 
 		var player = { m_id     	: a_userId,
