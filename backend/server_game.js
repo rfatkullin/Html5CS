@@ -236,36 +236,37 @@ var CreateGame = function()
 					    m_y : a_expiredTime * a_bullet.m_vel.m_y };
 		var newPos = { m_x : a_bullet.m_pos.m_x + moveVec.m_x,
 					   m_y : a_bullet.m_pos.m_y + moveVec.m_y };
+		var collide = false;
+		
+    	for ( var wallId in this.m_walls )
+    	{
+    		if( Geometry.SegInterOrInRec( a_bullet.m_pos, moveVec, this.m_walls[ wallId ] ).m_intersect === true )
+    		{
+    			this.DeleteBullet( a_bullet.m_id );
+    			collide = true;
+    			break;
+    		}
+    	}
 
-		if ( this.IsOutOfField( newPos ) === true )
+	    for ( var playerId in this.m_players )
+	    {
+	    	if ( parseInt( playerId ) === a_bullet.m_ownerId )
+	    		continue;
+
+	    	if ( Geometry.SegInterOrInCircle( a_bullet.m_pos, moveVec, this.m_world[ playerId ].m_pos, Player.RAD ).m_intersect === true )
+	    	{
+	    		this.DeleteBullet( a_bullet.m_id );
+
+	    		if ( this.m_world[ playerId ].m_teamId !== a_bullet.m_teamId )
+	    			this.PlayerAttacked( playerId );
+
+	    		collide = true;	    		
+	    		break;
+	    	}
+	    }		
+
+		if ( ( collide === false ) && ( this.IsOutOfField( newPos ) === true ) )
         	this.DeleteBullet( a_bullet.m_id );
-        else
-        {
-        	for ( var wallId in this.m_walls )
-        	{
-        		if( Geometry.SegInterOrInRec( a_bullet.m_pos, moveVec, this.m_walls[ wallId ] ).m_intersect === true )
-        		{
-        			this.DeleteBullet( a_bullet.m_id );
-        			break;
-        		}
-        	}
-
-		    for ( var playerId in this.m_players )
-		    {
-		    	if ( parseInt( playerId ) === a_bullet.m_ownerId )
-		    		continue;
-
-		    	if ( Geometry.SegInterOrInCircle( a_bullet.m_pos, moveVec, this.m_world[ playerId ].m_pos, Player.RAD ).m_intersect === true )
-		    	{
-		    		this.DeleteBullet( a_bullet.m_id );
-
-		    		if ( this.m_world[ playerId ].m_teamId !== a_bullet.m_teamId )
-		    			this.PlayerAttacked( playerId );
-
-		    		break;
-		    	}
-		    }
-		}
 
         this.m_updObjs[ a_bullet.m_id ] = a_bullet;
         a_bullet.m_pos = newPos;
@@ -276,12 +277,9 @@ var CreateGame = function()
 		if ( this.m_snapshotObjList.length > SNAPSHOTS_CNT )
 			this.m_snapshotObjList.shift();
 
-		for ( var id in this.m_delObjs )
-		{
-			delete this.m_world[ id ];
+		for ( var id in this.m_delObjs )					
 			delete this.m_updObjs[ id ];
-		}
-
+		
 		for ( var id in this.m_addObjs )
 			delete this.m_updObjs[ id ];
 

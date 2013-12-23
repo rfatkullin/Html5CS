@@ -16,8 +16,31 @@ function GetShader( a_type, a_domId )
     return shader;
 }
 
-function InitShaders()
+function InitGL()
 {
+    canvas = document.getElementById( 'game-canvas' );
+
+    if ( !canvas )
+        alert( '[Error]: Can\'t find canvas element on page!' );
+
+    try
+    {
+        gl = canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' );
+
+        if ( !gl )
+            alert( '[Error]: Can\'t retrieve webgl context!' );
+    }
+    catch( excp )
+    {
+        alert( '[Exc]: On retriving webgl context!' );
+    }
+
+    if ( gl === undefined )
+        return;
+
+    gl.viewportWidth  = canvas.width;
+    gl.viewportHeight = canvas.height;
+    
     var vertexShader   = GetShader( gl.VERTEX_SHADER, 'shader_vertex' );
     var fragmentShader = GetShader( gl.FRAGMENT_SHADER, 'shader_fragment' );
 
@@ -39,4 +62,6 @@ function InitShaders()
 
     gl.uniform2f( g_graphics.m_shaderProgram.m_resolutionUniform , canvas.width, canvas.height );
 }
+
+
 

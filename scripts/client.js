@@ -93,7 +93,7 @@ function OnMouseMove( a_event )
     else
         g_client.m_mouseLastPos = { m_x : 0, m_y : 0 };
 
-    g_mouseMove = true;
+    this.m_mouseMove = true;
     g_cursor.SetPos( g_client.m_mouseLastPos );
 }
 
@@ -165,12 +165,12 @@ function ProcessInput()
     }
 
     //Обрабатываем движение мышки
-    if ( g_mouseMove )
+    if ( this.m_mouseMove )
     {
         var command = { type     : Commands.CHANGE_DIR,
                         dirPoint : g_client.m_mouseLastPos };
         commands.push( command );
-        g_mouseMove = false;
+        this.m_mouseMove = false;
     }
 
     if ( commands.length > 0 )
@@ -187,38 +187,12 @@ function UpdateExtrapolation()
 
 function OnLoad()
 {
-    canvas = document.getElementById( 'game-canvas' );
-
-    if ( !canvas )
-        alert( '[Error]: Can\'t find canvas element on page!' );
-
-    try
-    {
-        gl = canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' );
-
-        if ( !gl )
-            alert( '[Error]: Can\'t retrieve webgl context!' );
-    }
-    catch( excp )
-    {
-        alert( '[Exc]: On retriving webgl context!' );
-    }
-
-    if ( gl )
-    {
-        gl.viewportWidth  = canvas.width;
-        gl.viewportHeight = canvas.height;
-
-        InitShaders();
-    }
+    InitGL();  
 
     g_client            = new GameClient();
     g_cursor            = new Cursor( g_client.m_mouseLastPos );
     g_background        = new Background();
-    g_world             = new World();
-
-    g_mouseMove         = false;
-    g_shiftPlayer       = false;
+    g_world             = new Game();
 
     setInterval( NextState, 20 );
     setInterval( UpdateExtrapolation, 3000 );
@@ -232,12 +206,12 @@ function Connect( a_button )
         g_webSocket.close();
 
     g_client = new GameClient();
-    g_world  = new World();
+    g_world  = new Game();
 
     UpdateInterpolateValue();
 
-    g_webSocket = new WebSocket( 'ws://localhost:1024' );
-    //g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
+    //g_webSocket = new WebSocket( 'ws://localhost:1024' );
+    g_webSocket = new WebSocket( 'ws://5.231.71.26:1024' );
 
     if ( g_webSocket === undefined )
         alert( 'WebSockets not supported' );
@@ -269,12 +243,10 @@ function DrawGameField()
 }
 
 function GameClient ()
-{
-    this.m_shiftVec     = { m_x : 0.0, m_y : 0.0 };
+{    
     this.m_start        = false;
     this.m_downKeys     = {};
     this.m_prevDir      = {};
-    this.m_mouseLastPos = { m_x : 0, m_y : canvas.height };
-    this.m_commands     = [];
-    this.m_sentInpCnt   = 0;
+    this.m_mouseMove    = false;    
+    this.m_mouseLastPos = { m_x : 0, m_y : canvas.height };    
 }
