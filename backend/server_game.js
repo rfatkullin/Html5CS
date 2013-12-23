@@ -7,57 +7,40 @@ var Wall 	 		= require( '../shared/constants' ).Wall;
 var EPSILON	 		= require( '../shared/constants' ).EPSILON;
 var Game 			= require( '../shared/constants' ).Game;
 
-var CreateWorld = function()
+var CreateGame = function()
 {
 	var SNAPSHOTS_CNT 	= 66; // 2 sec
 	var MAP_WIDTH		= 800;
 	var MAP_HEIGHT		= 600;
 	var ITER_CNT		= 20;
 
-	this.NewWall = function ( a_pos )
-	{
-		var wall = { m_id   : this.GetUniqueId(),
-					 m_type : 'wall',
-					 m_pos  : a_pos };
-
-		this.m_world[ wall.m_id ] = wall;
-		this.m_walls[ wall.m_id ] = new Geometry.Rectangle( wall.m_pos, Wall.WIDTH, Wall.HEIGHT );
-	}
-
 	this.GenerateMap = function ()
 	{
-		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 1.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 2.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 3.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 4.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 5.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 1.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 2.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 3.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 4.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 2.5 * Wall.WIDTH, m_y : MAP_HEIGHT - 5.5 * Wall.HEIGHT } );
 
-		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 1.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 4.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 5.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 1.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 4.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 2.5 * Wall.WIDTH, m_y : 5.5 * Wall.HEIGHT } );
 
-		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 11.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 7.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH -  9.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 11.5 * Wall.WIDTH, m_y : 8.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 7.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 10.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH -  9.5 * Wall.WIDTH, m_y : 6.5 * Wall.HEIGHT } );
 
-		this.NewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 12.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 11.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 12.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : MAP_WIDTH - 5.5 * Wall.WIDTH, m_y : 11.5 * Wall.HEIGHT } );
 
-		this.NewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
-		this.NewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
-
+		this.AddNewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 2.5 * Wall.HEIGHT } );
+		this.AddNewWall( { m_x : 4.5 * Wall.WIDTH, m_y : 3.5 * Wall.HEIGHT } );
 	}
-
-	this.InitTeams = function ()
-	{
-		TeamsDir 	   = [ { m_x :  1, m_y : 0 },
-						   { m_x : -1, m_y : 0 } ];
-	}
-
+	
 	this.GetUniqueId = function ()
 	{
 		return this.m_currObjId++;
@@ -302,8 +285,7 @@ var CreateWorld = function()
 		for ( var id in this.m_addObjs )
 			delete this.m_updObjs[ id ];
 
-		this.m_snapshotObjList.push( {  m_time	   : a_currTime,
-										m_tick 	   : this.m_tick,
+		this.m_snapshotObjList.push( {  m_time	   : a_currTime,										
 										m_addObjs  : jQuery.extend( true, {}, this.m_addObjs ),
 										m_updObjs  : jQuery.extend( true, {}, this.m_updObjs ),
 										m_delObjs  : jQuery.extend( true, {}, this.m_delObjs ),
@@ -316,8 +298,6 @@ var CreateWorld = function()
 
 	this.NextStep = function ( a_currTime, a_expiredTime )
 	{
-		++this.m_tick;
-
 		this.MoveBullets( a_expiredTime );
 		this.MovePlayers( a_expiredTime );
 
@@ -337,66 +317,7 @@ var CreateWorld = function()
 				 m_updObjs : this.m_snapshotObjList[ lastInd ].m_updObjs,
 				 m_delObjs : this.m_snapshotObjList[ lastInd ].m_delObjs };
 	}
-
-	this.FindPosForNewPlayer = function ()
-	{
-		var beginX 	= Player.RAD;
-		var endX 	= MAP_WIDTH - Player.RAD;
-		var beginY 	= Player.RAD;
-		var endY	= MAP_HEIGHT - Player.RAD;
-		var width  	= endX - beginX;
-		var height 	= endY - beginY;
-		var collide = false;
-
-		do
-		{
-			collide = false;
-
-			var pos = { m_x : beginX + Math.random() * width,
-						m_y : beginY + Math.random() * height };
-
-			for ( var id in this.m_world )
-			{
-				if ( ( ( this.m_world[ id ].m_type === 'wall' ) && ( Geometry.CircleInterOrInRec( pos, Player.RAD, this.m_walls[ id ] ) === true ) ) ||
-					 ( ( this.m_world[ id ].m_type === 'player' ) && ( Geometry.CircleCircleInter( pos, Player.RAD, this.m_world[ id ].m_pos, Player.RAD ) === true ) ) )
-				{
-					Logger.Info( 'Player pos : ' + JSON.stringify( pos ) );
-					Logger.Info( 'Wall object : ' + JSON.stringify( this.m_walls[ id ] ) );
-					collide = true;
-					break;
-				}
-			}
-		}
-		while ( collide === true )
-
-		return pos;
-	}
-
-	this.AddNewPlayer = function ( a_userId )
-	{
-		var teamId = 0;
-
-		if ( this.m_teams[ 0 ] > this.m_teams[ 1 ] )
-			teamId = 1;
-		this.m_teams[ teamId ]++;
-
-		var pos = this.FindPosForNewPlayer();
-		var dir = jQuery.extend( false, {}, TeamsDir[ teamId ] );
-
-		var player = { m_id     	: a_userId,
-					   m_type   	: 'player',
-					   m_teamId 	: teamId,
-					   m_health		: Player.INIT_HEALTH,
-					   m_pos 		: pos,
-					   m_moveDir	: { m_x : 0.0, m_y : 0.0 },
-					   m_dirPoint	: { m_x : pos.m_x + dir.m_x, m_y : pos.m_x + dir.m_x },
-					   m_dir  		: dir };
-
-		this.m_world[ a_userId ]   			= player;
-		this.m_players[ a_userId ] 			= true;
-		this.m_addObjs[ a_userId ] 			= player;
-	}
-
+	
 	this.PlayerAlive = function( a_playerId )
 	{
 		return this.m_players[ a_playerId ] !== undefined;
@@ -536,6 +457,65 @@ var CreateWorld = function()
 		this.AddNewBullet( a_playerId, lastBegin, dir );
 	}
 
+	this.FindPosForNewPlayer = function ()
+	{
+		var beginX 	= Player.RAD;
+		var endX 	= MAP_WIDTH - Player.RAD;
+		var beginY 	= Player.RAD;
+		var endY	= MAP_HEIGHT - Player.RAD;
+		var width  	= endX - beginX;
+		var height 	= endY - beginY;
+		var collide = false;
+
+		do
+		{
+			collide = false;
+
+			var pos = { m_x : beginX + Math.random() * width,
+						m_y : beginY + Math.random() * height };
+
+			for ( var id in this.m_world )
+			{
+				if ( ( ( this.m_world[ id ].m_type === 'wall' ) && ( Geometry.CircleInterOrInRec( pos, Player.RAD, this.m_walls[ id ] ) === true ) ) ||
+					 ( ( this.m_world[ id ].m_type === 'player' ) && ( Geometry.CircleCircleInter( pos, Player.RAD, this.m_world[ id ].m_pos, Player.RAD ) === true ) ) )
+				{
+					Logger.Info( 'Player pos : ' + JSON.stringify( pos ) );
+					Logger.Info( 'Wall object : ' + JSON.stringify( this.m_walls[ id ] ) );
+					collide = true;
+					break;
+				}
+			}
+		}
+		while ( collide === true )
+
+		return pos;
+	}
+
+	this.AddNewPlayer = function ( a_userId )
+	{
+		var teamId = 0;
+
+		if ( this.m_teams[ 0 ] > this.m_teams[ 1 ] )
+			teamId = 1;
+		this.m_teams[ teamId ]++;
+
+		var pos = this.FindPosForNewPlayer();
+		var dir = { m_x : -1.0, m_y : 0.0 };
+
+		var player = { m_id     	: a_userId,
+					   m_type   	: 'player',
+					   m_teamId 	: teamId,
+					   m_health		: Player.INIT_HEALTH,
+					   m_pos 		: pos,
+					   m_moveDir	: { m_x : 0.0, m_y : 0.0 },
+					   m_dirPoint	: { m_x : pos.m_x + dir.m_x, m_y : pos.m_x + dir.m_x },
+					   m_dir  		: dir };
+
+		this.m_world[ a_userId ]   	= player;
+		this.m_players[ a_userId ] 	= true;
+		this.m_addObjs[ a_userId ] 	= player;
+	}
+
 	this.AddNewBullet = function ( a_playerId, a_pos, a_dir )
 	{
 		var vel = { m_x : a_dir.m_x * Bullet.VEL,
@@ -553,26 +533,34 @@ var CreateWorld = function()
 		this.m_addObjs[ bullet.m_id ] = bullet;
 	}
 
+
+	this.AddNewWall = function ( a_pos )
+	{
+		var wall = { m_id   : this.GetUniqueId(),
+					 m_type : 'wall',
+					 m_pos  : a_pos };
+
+		this.m_world[ wall.m_id ] = wall;
+		this.m_walls[ wall.m_id ] = new Geometry.Rectangle( wall.m_pos, Wall.WIDTH, Wall.HEIGHT );
+	}
+
 	//For unique keys
-	this.m_currObjId		= 0;
-	this.m_tick				= 0;
+	this.m_currObjId		= 0;	
 	this.m_world    		= {};
 	this.m_addObjs  		= {};
 	this.m_updObjs			= {};
 	this.m_delObjs			= {};
-	this.m_snapshotObjList 	= []
-	this.m_teams			= [ 0, 0 ];
+	this.m_snapshotObjList 	= [];
+	this.m_teams			= [ 0, 0 ];	
 
 	this.m_walls 			= {};
 	this.m_players 			= {};
 	this.m_bullets			= {};
 
-	this.GenerateMap();
-	this.InitTeams();
+	this.GenerateMap();	
 
 	//Ограничивающий прямоугольник
 	this.m_boundWall = new Geometry.Rectangle( { m_x : MAP_WIDTH / 2.0, m_y : MAP_HEIGHT / 2.0 }, MAP_WIDTH, MAP_HEIGHT );
-
 }
 
-module.exports.CreateWorld = CreateWorld;
+module.exports.CreateGame = CreateGame;

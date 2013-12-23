@@ -28,15 +28,15 @@ function OnMessage( a_msg )
 			if ( this.m_logined === false )
 			{
 				this.m_logined = true;
-				g_world.AddNewPlayer( this.m_playerId );
+				g_game.AddNewPlayer( this.m_playerId );
 				this.send( JSON.stringify( { type : 'login', login : this.m_playerId, teamId : this.m_teamId } ) );
 				Logger.Info( 'Sent login: ' + this.m_playerId );
 			}
 			break;
 
 		case 'control' :
-			if ( g_world.PlayerAlive( this.m_playerId ) )
-				g_world.ProcessControl( currTime - this.m_ping - a_msg.m_interVal, this.m_playerId, a_msg.commands );
+			if ( g_game.PlayerAlive( this.m_playerId ) )
+				g_game.ProcessControl( currTime - this.m_ping - a_msg.m_interVal, this.m_playerId, a_msg.commands );
 			break;
 
 		default :
@@ -47,9 +47,8 @@ function OnMessage( a_msg )
 
 function ClientLeft( a_ws )
 {
-	g_world.DeletePlayer( a_ws.m_playerId );
-	delete g_server.m_conns[ a_ws.m_playerId ];
-	--g_server.m_usersCnt;
+	g_game.DeletePlayer( a_ws.m_playerId );
+	delete g_server.m_conns[ a_ws.m_playerId ];	
 }
 
 function OnError()
@@ -70,19 +69,17 @@ function GameServerWrapper()
 	var thisObj 				= this;
 	var webSocketServer			= require( 'ws' ).Server;
 	var server 					= new webSocketServer( { port : WEB_SOCKET_SERVER_PORT } );
-	this.m_conns  				= {};
-	this.m_usersCnt				= 0;
+	this.m_conns  				= {};	
 	this.m_prevTime				= GetTime();
 	this.AddConn = function ( a_conn )
 	{
-		var connId 					= g_world.GetUniqueId();
+		var connId 					= g_game.GetUniqueId();
 		a_conn.m_playerId 			= connId;
 		a_conn.m_ack 				= 0;
 		a_conn.m_lastAckSnapshot 	= 0;
 		a_conn.m_logined 			= false;
 		a_conn.m_isNewConn			= true;
-		this.m_conns[ connId ] 		= a_conn;
-		++this.m_usersCnt;
+		this.m_conns[ connId ] 		= a_conn;		
 	}
 
 	this.GetExpiredTime = function ()
@@ -117,7 +114,7 @@ function SendSnapshots()
 		if ( !conn.m_logined )
 			continue;
 
-		if ( !g_world.PlayerAlive( conn.m_playerId ) )
+		if ( !g_game.PlayerAlive( conn.m_playerId ) )
 		{
 			conn.close();
 			continue;
@@ -128,13 +125,13 @@ function SendSnapshots()
 		if ( conn.m_isNewConn )
 		{
 			data.isDiff = false;
-			data.snapshot = g_world.GetWholeWorld();
+			data.snapshot = g_game.GetWholeWorld();
 			conn.m_isNewConn = false;
 		}
 		else
 		{
 			data.isDiff = true;
-			data.diff = g_world.GetSnapshotDiff();
+			data.diff = g_game.GetSnapshotDiff();
 		}
 
 		try
@@ -190,7 +187,7 @@ function PrintPings()
 
 function TickHandler()
 {
-	g_world.NextStep( GetTime(), g_server.GetExpiredTime() );
+	g_game.NextStep( GetTime(), g_server.GetExpiredTime() );
 
 	SendSnapshots();
 }
@@ -200,7 +197,7 @@ function main()
 	TICKS_INTERVAL 	  = 30;    // 30 msec.
 	PING_UPD_INTERVAL = 1000 // 1 minute
 
-	g_world  = new GameModule.CreateWorld();
+	g_game  = new GameModule.CreateGame();
 	g_server = new GameServerWrapper();
 
 	setInterval( TickHandler, TICKS_INTERVAL );
