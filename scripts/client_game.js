@@ -1,4 +1,4 @@
-function Game()
+function CreateGame()
 {
 	var ownPlayerColor  	= [ 0.0, 1.0, 0.0, 0.3 ];
 	var ourCommandColor 	= [ 0.0, 0.0, 1.0, 0.3 ];

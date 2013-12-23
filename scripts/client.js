@@ -33,12 +33,12 @@ function OnMessage( a_msg )
             break;
         case 'login' :
             InfLog( '[RECV]: Get login: ' + a_msg.login );
-            g_world.SetPlayerInfo( a_msg.login );
+            g_game.SetPlayerInfo( a_msg.login );
             g_client.m_start = true;
             break;
 
         case 'update' :
-            g_world.Update( a_msg );
+            g_game.Update( a_msg );
             break;
 
         default :
@@ -48,8 +48,8 @@ function OnMessage( a_msg )
 
 function UpdateInterpolateValue()
 {
-    g_world.INTER_TIME = document.getElementById( 'inter_val' ).value;
-    document.getElementById( 'inter_val_text' ).innerHTML = 'Задержка интерполяции: ' +  g_world.INTER_TIME + ' мсек';
+    g_game.INTER_TIME = document.getElementById( 'inter_val' ).value;
+    document.getElementById( 'inter_val_text' ).innerHTML = 'Задержка интерполяции: ' +  g_game.INTER_TIME + ' мсек';
 }
 
 function OnKeyDown( a_event )
@@ -130,9 +130,9 @@ function ProcessPlayerAttack( a_mousePos )
         return;
 
     var command = { type  : Commands.ATTACK,
-                    pos   : g_world.GetPlayerPos(),
+                    pos   : g_game.GetPlayerPos(),
                     point : a_mousePos.m_pos };
-    g_webSocket.send( JSON.stringify( { type : 'control', m_interVal : g_world.INTER_TIME, commands : [ command ] } ) );
+    g_webSocket.send( JSON.stringify( { type : 'control', m_interVal : g_game.INTER_TIME, commands : [ command ] } ) );
 }
 
 function ProcessInput()
@@ -179,7 +179,7 @@ function ProcessInput()
 
 function UpdateExtrapolation()
 {
-    var info = g_world.GetExtrapolationInfo();
+    var info = g_game.GetExtrapolationInfo();
 
     document.getElementById( 'aver_extrapolation' ).innerHTML = 'Среднее время экстраполяции за последние 3 сек: ' + info.m_aver + ' сек';
     document.getElementById( 'last_extrapolation' ).innerHTML = 'Последняя экстраполяции: на ' + info.m_last + ' сек';
@@ -189,10 +189,10 @@ function OnLoad()
 {
     InitGL();  
 
-    g_client            = new GameClient();
-    g_cursor            = new Cursor( g_client.m_mouseLastPos );
-    g_background        = new Background();
-    g_world             = new Game();
+    g_client        = new GameClient();
+    g_cursor        = new Cursor( g_client.m_mouseLastPos );
+    g_background    = new Background();
+    g_game          = new CreateGame();
 
     setInterval( NextState, 20 );
     setInterval( UpdateExtrapolation, 3000 );
@@ -206,7 +206,7 @@ function Connect( a_button )
         g_webSocket.close();
 
     g_client = new GameClient();
-    g_world  = new Game();
+    g_game  = new CreateGame();
 
     UpdateInterpolateValue();
 
@@ -230,7 +230,7 @@ function NextState()
         return;
 
     ProcessInput();
-    g_world.Draw();
+    g_game.Draw();
     g_cursor.Draw();
 }
 
